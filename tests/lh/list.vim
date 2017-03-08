@@ -6,7 +6,7 @@
 "               <URL:http://github.com/LucHermitte/lh-vim-lib/License.md>
 " Version:      4.0.0
 " Created:	19th Nov 2008
-" Last Update:  10th Feb 2017
+" Last Update:  08th Mar 2017
 "------------------------------------------------------------------------
 " Description:
 " 	Tests for autoload/lh/list.vim
@@ -554,6 +554,7 @@ function! s:Test_zip_lists() abort
   let l2 = [1, 2, 3]
   AssertEquals(lh#list#zip(l1, l2), [['a', 1], ['b', 2], ['c', 3]])
   AssertThrows(lh#list#zip([1], [1,2]))
+  Comment lh#askvim#exe('function lh#list#zip')
 endfunction
 
 " Function: s:Test_zip_dict() {{{3
