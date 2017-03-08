@@ -552,9 +552,11 @@ endfunction
 function! s:Test_zip_lists() abort
   let l1 = ['a', 'b', 'c']
   let l2 = [1, 2, 3]
+  call lh#assert#verbose(1)
   AssertEquals(lh#list#zip(l1, l2), [['a', 1], ['b', 2], ['c', 3]])
   AssertThrows(lh#list#zip([1], [1,2]))
-  Comment lh#askvim#exe('function lh#list#zip')
+  call lh#assert#verbose(0)
+  call lh#log#this(lh#askvim#exe('function lh#list#zip'))
 endfunction
 
 " Function: s:Test_zip_dict() {{{3
