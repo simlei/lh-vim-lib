@@ -5,7 +5,7 @@
 " Version:      4.0.0.0.
 let s:k_version = '4000'
 " Created:      23rd Nov 2016
-" Last Update:  06th Mar 2017
+" Last Update:  08th Mar 2017
 "------------------------------------------------------------------------
 " Description:
 "       Emulates assert_*() functions, but notifies as soon as possible that
@@ -60,6 +60,7 @@ endfunction
 "
 " Function: lh#assert#_trace_assert(msg) {{{2
 function! lh#assert#_trace_assert(msg) abort
+  call s:Verbose("Assertion failed w/ msg: %1 -- let's compute the callstack", a:msg)
   let cb = lh#exception#callstack_as_qf('', a:msg)
   " let g:cb = copy(cb)
   if len(cb) > 2
