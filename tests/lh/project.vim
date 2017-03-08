@@ -275,6 +275,9 @@ function! s:Test_let_to_best_varname_match() abort
   AssertEquals(lh#project#_best_varname_match('', 'parent.newkey.subkey').realname,   expected_parents.'parent.newkey.subkey')
 
   " Now the same thing with LetTo
+  call lh#let#verbose(1)
+  call lh#project#verbose(1)
+  call lh#project#object#verbose(1)
   LetTo --overwrite p:newchld.k              = 10
   LetTo --overwrite p:shared.newkey          = 11
   LetTo --overwrite p:shared.shdchld.newkey  = 12
@@ -284,6 +287,9 @@ function! s:Test_let_to_best_varname_match() abort
   LetTo --overwrite p:shared.shdprnt.new.key = 15
   LetTo --overwrite p:parent.newkey.subkey   = 16
   LetTo --overwrite p:twice                  = 142
+  call lh#project#object#verbose(0)
+  call lh#project#verbose(0)
+  call lh#let#verbose(0)
 
   AssertEquals(parent.variables, {'shared': {'shdprnt': {'newkey':14, 'new': {'key': 15}} }, 'parent': {'newkey': {'subkey': 16}}, 'twice': 142})
   AssertEquals(child.variables, {'shared': {'newkey': 11, 'shdchld': {'newkey': 12, 'new': {'key': 13} }}, 'newchld': {'k': 10}})
