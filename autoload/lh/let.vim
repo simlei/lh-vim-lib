@@ -91,7 +91,7 @@ function! s:BuildPublicVariableName(var, hide_or_overwrite, must_keep_previous) 
       endif
     endif
     let var = lh#project#_crt_var_name(a:var, a:hide_or_overwrite)
-    call s:Verbose('s:BuildPublicVariableName:   otherwise write in %1', var)
+    call s:Verbose('s:BuildPublicVariableName:   otherwise write in %1 (<- %2)', var, a:var)
   else
     let var = a:var
     call s:Verbose('s:BuildPublicVariableName: default case (g:, b:, ...) %1', var)
