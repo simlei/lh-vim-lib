@@ -216,7 +216,6 @@ function! s:LetTo(var, value) abort " {{{4
   " Here, project variables have already been resolved.
   let [all, dict, key, subscript ; dummy] = matchlist(a:var, '^\v(.{-})%(\.([^\[.]{-})%(\[(.{-})\])=)=$')
   call lh#assert#value(subscript).empty("Case not yet handled")
-  " echomsg a:var." --> dict=".dict." --- key=".key
   if !empty(key)
     " Dictionaries
     let dict2 = s:LetIfUndef(dict, {}) " Don't override the dict w/ s:LetTo()!
@@ -224,6 +223,9 @@ function! s:LetTo(var, value) abort " {{{4
 
     " let dict2[key] = type(a:value) == type(function('has')) ? (a:value) : eval(a:value)
     call s:Verbose("let %1.%2 = %3 %4 // %1=%5", dict, key, a:value, !empty(subscript) ? '@['.subscript.']' : '', dict2)
+    if ! lh#type#is_dict(dict2)
+      throw "E689: Type mismatch: Can only index a List or Dictionary."
+    endif
     let dict2[key] = a:value
     return dict2[key]
   elseif a:var =~ '^\$'
