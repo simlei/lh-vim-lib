@@ -99,15 +99,9 @@ function! s:Test_create() " {{{2
     AssertEquals(lh#option#get('test'), 'buff')
     Unlet p:test
     AssertEquals(lh#option#get('test'), 'buff')
-  call lh#let#verbose(1)
-  call lh#project#verbose(1)
-  call lh#project#object#verbose(1)
     LetTo p:test = 'prj1'
     Unlet b:test
     AssertEquals(lh#option#get('test'), 'prj1')
-  call lh#let#verbose(1)
-  call lh#project#verbose(1)
-  call lh#project#object#verbose(1)
     AssertEquals(lh#let#_list_variables('p:', 1), [])
     AssertEquals(sort(lh#let#_list_variables('p:', 0)), sort(['p:test']))
     Unlet p:test

@@ -6,7 +6,7 @@
 "               <URL:http://github.com/LucHermitte/lh-vim-lib/blob/master/License.md>
 " Version:      4.0.0
 " Created:      10th Sep 2012
-" Last Update:  08th Mar 2017
+" Last Update:  09th Mar 2017
 "------------------------------------------------------------------------
 " Description:
 " 	Tests for plugin/let.vim's LetIfUndef
@@ -450,7 +450,9 @@ function! s:Test_let_force_dictionaries_cmd() " {{{3
   LetTo g:dummy_test.un.deux 42
   AssertEquals(g:dummy_test.un.deux, 42)
   " cannot change var to dict
+  call lh#let#verbose(1)
   AssertThrow(lh#let#to('g:dummy_test.un.deux.trois', 42))
+  call lh#let#verbose(0)
 
   " value = string {{{4
   silent! unlet g:dummy_test
