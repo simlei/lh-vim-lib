@@ -173,7 +173,8 @@ if has("patch-7.4-1707")
         \ }
 else
   let s:k_store_for =
-        \ { '&': 'options'
+        \ { 'v': 'variables'
+        \ , '&': 'options'
         \ , '$': 'env'
         \ }
 endif
@@ -184,6 +185,9 @@ function! lh#project#_crt_var_name(var, ...) abort
     let [all, kind, name; dummy] = matchlist(a:var, '\v^(\&)p:(.*)')
   else
     call lh#assert#unexpected('Unexpected variable name '.string(a:var))
+  endif
+  if  !has("patch-7.4-1707") && empty(kind)
+    let kind = 'v'
   endif
   call s:Verbose('prj#_crt_var_name: kind: %1, name: %2', kind, name)
   if lh#project#is_in_a_project()
@@ -274,7 +278,7 @@ function! lh#project#_best_varname_match(kind, name) abort
   call s:Verbose('prj#_best_varname_match(%1) in a project? %2', a:, lh#project#is_in_a_project() ? 'yes': 'no')
   call lh#assert#true(lh#project#is_in_a_project())
 
-  let store = get(s:k_store_for, kind, 'variables')
+  let store = get(s:k_store_for, a:kind, 'variables')
   call s:Verbose('prj#_best_varname_match(%1) store: %2', a:, store)
   let varname = '.'.store.'.'.a:name
   let absvarname = 'b:'.s:project_varname.varname
