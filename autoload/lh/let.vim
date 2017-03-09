@@ -92,7 +92,6 @@ endfunction
 " Function: s:BuildPublicVariableNameAndValue(must_keep_previous ; string|var, value) {{{3
 let s:k_hide_or_overwite = '--(hide|overwrite)'
 function! s:BuildPublicVariableNameAndValue(must_keep_previous, ...) abort
-  call s:Verbose('s:BuildPublicVariableNameAndValue: Checking this is the rigth version... (args: %1)', a:)
   if len(a:000) == 1
     " Strip --overwrite/--hide option
     let [all, hide_or_overwrite, expr ; tail] = matchlist(a:1, '\v^%('.s:k_hide_or_overwite.'\s*)=(.*)$')
@@ -102,8 +101,10 @@ function! s:BuildPublicVariableNameAndValue(must_keep_previous, ...) abort
       " options need a special handling
       let [all, var, assign, value0 ; dummy] = matchlist(expr, '^\v(\S{-})\s*([+-]=\=)\s*(.*)')
       let l:Value = assign.value0
+      call s:Verbose('s:BuildPublicVariableNameAndValue: found option')
     else
       let [all, var, value0 ; dummy] = matchlist(expr, '^\v(\S{-})%(\s*\=\s*|\s+)(.*)')
+      call s:Verbose('s:BuildPublicVariableNameAndValue: found var=value -> %1=%2', var, value0)
       " string+eval loses references, and it doesn't seem required.
 
       " Handle comments and assign value
@@ -122,6 +123,7 @@ function! s:BuildPublicVariableNameAndValue(must_keep_previous, ...) abort
     " let value = string(a:2)
   endif
   let resvar = s:BuildPublicVariableName(var, hide_or_overwrite, a:must_keep_previous)
+  call s:Verbose('s:BuildPublicVariableNameAndValue: return var=%1, val=%2', resvar, l:Value)
   return [resvar, l:Value]
 endfunction
 
