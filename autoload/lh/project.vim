@@ -275,24 +275,19 @@ endfunction
 " - lh#project#_best_varname_match(kind, 'd2') -> parent
 " - lh#project#_best_varname_match(kind, 'd2.l2') -> parent
 function! lh#project#_best_varname_match(kind, name) abort
-  call s:Verbose('prj#_best_varname_match(%1) in a project? %2', a:, lh#project#is_in_a_project() ? 'yes': 'no')
   call lh#assert#true(lh#project#is_in_a_project())
 
   let store = get(s:k_store_for, a:kind, 'variables')
-  call s:Verbose('prj#_best_varname_match(%1) store: %2', a:, store)
   let varname = '.'.store.'.'.a:name
   let absvarname = 'b:'.s:project_varname.varname
   let prj = b:{s:project_varname}
   let res = {'project': prj}
-  call s:Verbose('prj#_best_varname_match(%1) -> varname=%2, absvarname=%3, prj=%4', a:, varname, absvarname, prj)
   let holded_name = prj.find_holder_name(a:name, store)
-  call s:Verbose('prj#_best_varname_match(%1) -> holded_name=%2', a:, holded_name)
   if !empty(holded_name)
     let res.realname = 'b:'.s:project_varname.holded_name.a:name
     " return 'b:'.s:project_varname.holded_name.a:name
   else
     let parts = split(a:name, '\.')
-    call s:Verbose('prj#_best_varname_match: parts(%1)=%2', a:name, parts)
     if len(parts) == 1
       " This is a the smallest part
       " return absvarname

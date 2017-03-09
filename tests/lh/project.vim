@@ -5,7 +5,7 @@
 " Version:      4.0.0.
 let s:k_version = '400'
 " Created:      10th Sep 2016
-" Last Update:  08th Mar 2017
+" Last Update:  09th Mar 2017
 "------------------------------------------------------------------------
 " Description:
 "       Tests for lh#project
@@ -99,9 +99,15 @@ function! s:Test_create() " {{{2
     AssertEquals(lh#option#get('test'), 'buff')
     Unlet p:test
     AssertEquals(lh#option#get('test'), 'buff')
+  call lh#let#verbose(1)
+  call lh#project#verbose(1)
+  call lh#project#object#verbose(1)
     LetTo p:test = 'prj1'
     Unlet b:test
     AssertEquals(lh#option#get('test'), 'prj1')
+  call lh#let#verbose(1)
+  call lh#project#verbose(1)
+  call lh#project#object#verbose(1)
     AssertEquals(lh#let#_list_variables('p:', 1), [])
     AssertEquals(sort(lh#let#_list_variables('p:', 0)), sort(['p:test']))
     Unlet p:test
@@ -275,9 +281,6 @@ function! s:Test_let_to_best_varname_match() abort
   AssertEquals(lh#project#_best_varname_match('', 'parent.newkey.subkey').realname,   expected_parents.'parent.newkey.subkey')
 
   " Now the same thing with LetTo
-  call lh#let#verbose(1)
-  call lh#project#verbose(1)
-  call lh#project#object#verbose(1)
   LetTo --overwrite p:newchld.k              = 10
   LetTo --overwrite p:shared.newkey          = 11
   LetTo --overwrite p:shared.shdchld.newkey  = 12
@@ -287,9 +290,6 @@ function! s:Test_let_to_best_varname_match() abort
   LetTo --overwrite p:shared.shdprnt.new.key = 15
   LetTo --overwrite p:parent.newkey.subkey   = 16
   LetTo --overwrite p:twice                  = 142
-  call lh#project#object#verbose(0)
-  call lh#project#verbose(0)
-  call lh#let#verbose(0)
 
   AssertEquals(parent.variables, {'shared': {'shdprnt': {'newkey':14, 'new': {'key': 15}} }, 'parent': {'newkey': {'subkey': 16}}, 'twice': 142})
   AssertEquals(child.variables, {'shared': {'newkey': 11, 'shdchld': {'newkey': 12, 'new': {'key': 13} }}, 'newchld': {'k': 10}})
