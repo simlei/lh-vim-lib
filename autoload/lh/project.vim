@@ -277,6 +277,7 @@ function! lh#project#_best_varname_match(kind, name) abort
   let absvarname = 'b:'.s:project_varname.varname
   let prj = b:{s:project_varname}
   let res = {'project': prj}
+  call s:Verbose('prj#_best_varname_match(%1) -> varname=%2, absvarname=%3, prj=%4', a:, varname, absvarname, prj)
   let holded_name = prj.find_holder_name(a:name, s:k_store_for[a:kind])
   call s:Verbose('prj#_best_varname_match(%1) -> holded_name=%2', a:, holded_name)
   if !empty(holded_name)
@@ -296,7 +297,7 @@ function! lh#project#_best_varname_match(kind, name) abort
     endif
   endif
   " return 'b:'.s:project_varname.'.variables.'.a:name
-  call s:Verbose('prj#_best_varname_match(%1) -> return ->', a:, res)
+  call s:Verbose('prj#_best_varname_match(%1) -> return -> %2', a:, res)
   return res
 endfunction
 " # Find project root {{{2
