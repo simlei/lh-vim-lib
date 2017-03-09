@@ -278,11 +278,13 @@ function! lh#project#_best_varname_match(kind, name) abort
   let prj = b:{s:project_varname}
   let res = {'project': prj}
   let holded_name = prj.find_holder_name(a:name, s:k_store_for[a:kind])
+  call s:Verbose('prj#_best_varname_match(%1) -> holded_name=%2', a:, holded_name)
   if !empty(holded_name)
     let res.realname = 'b:'.s:project_varname.holded_name.a:name
     " return 'b:'.s:project_varname.holded_name.a:name
   else
     let parts = split(a:name, '\.')
+    call s:Verbose('prj#_best_varname_match: parts(%1)=%2', a:name, parts)
     if len(parts) == 1
       " This is a the smallest part
       " return absvarname
@@ -294,6 +296,7 @@ function! lh#project#_best_varname_match(kind, name) abort
     endif
   endif
   " return 'b:'.s:project_varname.'.variables.'.a:name
+  call s:Verbose('prj#_best_varname_match(%1) -> return ->', a:, res)
   return res
 endfunction
 " # Find project root {{{2
