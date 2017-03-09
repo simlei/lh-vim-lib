@@ -164,20 +164,11 @@ endfunction
 " @return a dict for p:&opt, and p:$ENV
 " @return a string for b:&opt
 " @throw for b:$ENV
-if has("patch-7.4-1707")
-  " Accept empty keys...
-  let s:k_store_for =
-        \ { '': 'variables'
-        \ , '&': 'options'
-        \ , '$': 'env'
-        \ }
-else
-  let s:k_store_for =
-        \ { 'v': 'variables'
-        \ , '&': 'options'
-        \ , '$': 'env'
-        \ }
-endif
+let s:k_store_for =
+      \ { 'v': 'variables'
+      \ , '&': 'options'
+      \ , '$': 'env'
+      \ }
 function! lh#project#_crt_var_name(var, ...) abort
   if a:var =~ '^p:'
     let [all, kind, name; dummy] = matchlist(a:var, '\v^p:([&$])=(.*)')
@@ -186,7 +177,8 @@ function! lh#project#_crt_var_name(var, ...) abort
   else
     call lh#assert#unexpected('Unexpected variable name '.string(a:var))
   endif
-  if  !has("patch-7.4-1707") && empty(kind)
+  if  empty(kind)
+    " In order to resist !has("patch-7.4-1707")
     let kind = 'v'
   endif
   call s:Verbose('prj#_crt_var_name: kind: %1, name: %2', kind, name)
@@ -204,7 +196,7 @@ function! lh#project#_crt_var_name(var, ...) abort
       let realname = 'b:'.s:project_varname.'.'.get(s:k_store_for, kind, 'variables').'.'.name
       call s:Verbose('prj#_crt_var_name: => realname=%1', realname)
     endif
-    if kind == ''
+    if kind == 'v'
       return shall_overwrite ? best_name.realname : realname
     else
       let varname = kind.name
