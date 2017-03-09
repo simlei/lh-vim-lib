@@ -275,12 +275,13 @@ function! lh#project#_best_varname_match(kind, name) abort
   call lh#assert#true(lh#project#is_in_a_project())
   call s:Verbose('prj#_best_varname_match(%1) after assert', a:)
 
-  let varname = '.'.s:k_store_for[a:kind].'.'.a:name
+  let store = get(s:k_store_for, kind, 'variables')
+  let varname = '.'.store.'.'.a:name
   let absvarname = 'b:'.s:project_varname.varname
   let prj = b:{s:project_varname}
   let res = {'project': prj}
   call s:Verbose('prj#_best_varname_match(%1) -> varname=%2, absvarname=%3, prj=%4', a:, varname, absvarname, prj)
-  let holded_name = prj.find_holder_name(a:name, s:k_store_for[a:kind])
+  let holded_name = prj.find_holder_name(a:name, store)
   call s:Verbose('prj#_best_varname_match(%1) -> holded_name=%2', a:, holded_name)
   if !empty(holded_name)
     let res.realname = 'b:'.s:project_varname.holded_name.a:name
