@@ -271,11 +271,11 @@ endfunction
 " - lh#project#_best_varname_match(kind, 'd2') -> parent
 " - lh#project#_best_varname_match(kind, 'd2.l2') -> parent
 function! lh#project#_best_varname_match(kind, name) abort
-  call s:Verbose('prj#_best_varname_match(%1) Enter, in a project: %2', a:, lh#project#is_in_a_project())
+  call s:Verbose('prj#_best_varname_match(%1) in a project? %2', a:, lh#project#is_in_a_project() ? 'yes': 'no')
   call lh#assert#true(lh#project#is_in_a_project())
-  call s:Verbose('prj#_best_varname_match(%1) after assert', a:)
 
   let store = get(s:k_store_for, kind, 'variables')
+  call s:Verbose('prj#_best_varname_match(%1) store: %2', a:, store)
   let varname = '.'.store.'.'.a:name
   let absvarname = 'b:'.s:project_varname.varname
   let prj = b:{s:project_varname}
