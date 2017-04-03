@@ -7,7 +7,7 @@
 " Version:	4.0.0
 let s:version = '4.0.0'
 " Created:	06th Nov 2007
-" Last Update:  08th Mar 2017
+" Last Update:  03rd Apr 2017
 "------------------------------------------------------------------------
 cd <sfile>:p:h
 try
@@ -83,6 +83,7 @@ plugin/words_tools.vim
 tests/lh/UT-fixpath.vim
 tests/lh/encoding.vim
 tests/lh/function.vim
+tests/lh/has.vim
 tests/lh/list.vim
 tests/lh/math.vim
 tests/lh/path.vim
