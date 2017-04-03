@@ -7,7 +7,7 @@
 " Version:      4.0.0
 let s:k_version = 40000
 " Created:      23rd Jan 2007
-" Last Update:  07th Mar 2017
+" Last Update:  31st Mar 2017
 "------------------------------------------------------------------------
 " Description:
 "       Functions related to the handling of pathnames
@@ -108,6 +108,7 @@ let s:k_version = 40000
 "       (*) Add `lh#path#is_up_to_date()`
 "       (*) Improve `lh#path#strip_start()` performances
 "       (*) lh#path#split('/foo') will now return 2 elements
+"       (*) Recognize empty name buffer as scratch/distant
 " TODO:
 "       (*) Fix #simplify('../../bar')
 " }}}1
@@ -331,7 +332,7 @@ endfunction
 
 " Function: lh#path#is_distant_or_scratch(path) {{{3
 function! lh#path#is_distant_or_scratch(path) abort
-  return a:path =~ '\v://|^//|^\\\\'
+  return a:path =~ '\v://|^//|^\\\\|^$'
         \ || getbufvar(bufnr(a:path), '&buftype') =~ 'nofile\|quickfix'
 endfunction
 
@@ -427,7 +428,9 @@ function! lh#path#relative_to(from, to) abort
 endfunction
 
 " Function: lh#path#glob_as_list({pathslist}, {expr} [, mustSort=1]) {{{3
-if has("patch-7.4-279")
+if has("patch-7.4.279") || (v:version == 704 && has('patch279'))
+  " Either version >= 7.4.237 and `has('patch-7.4.279')` detects correctly, or
+  " we can fall back to old detection, assuming that we still need to test v 7.4,
   function! s:DoGlobPath(pathslist, expr) abort
     let pathslist = type(a:pathslist) == type([]) ? join(a:pathslist, ',') : a:pathslist
     return globpath(pathslist, a:expr, 1, 1)
@@ -553,7 +556,7 @@ endfunction
 function! lh#path#vimfiles() abort
   let re_HOME = lh#path#to_regex($HOME.'/')
   let re_LUCHOME = exists('$LUCHOME') ? '\|'.lh#path#to_regex($LUCHOME.'/'): ''
-  let what =  '\%('.re_HOME.re_LUCHOME.'\)'.'\(vimfiles\|.vim\)'
+  let what = '\%('.re_HOME.re_LUCHOME.'\)'.'\(vimfiles\|.vim\|.config[/\\]nvim\)'
   " Comment what
   let z = lh#path#find(&rtp,what)
   return z
@@ -786,7 +789,7 @@ function! s:lists_handle_file(file, permission) dict abort
     call s:Verbose('Path %1 has already been validated for this session.', a:file)
     " TODO: add a way to remove pathnames from validated list
   elseif a:permission == 'asklist'
-    let choice = CONFIRM('Do you want to '. self._action_name. ' "'.a:file.'"?', "&Yes\n&No\n&Always\nNe&ver", 1)
+    let choice = lh#ui#confirm('Do you want to '. self._action_name. ' "'.a:file.'"?', "&Yes\n&No\n&Always\nNe&ver", 1)
     if choice == 3 " Always
       call s:Verbose("Add %1 to current session whitelist", a:file)
       call lh#path#munge(self.valided_paths, a:file)
@@ -834,7 +837,7 @@ function! s:lists_is_file_accepted(file, permission) dict abort
     call s:Verbose('Path %1 has already been validated.')
     " TODO: add a way to remove pathnames from validated list
   elseif a:permission == 'asklist'
-    if CONFIRM('Do you want to '. self._action_name. ' "'.a:file.'"?', "&Yes\n&No", 1) != 1
+    if lh#ui#confirm('Do you want to '. self._action_name. ' "'.a:file.'"?', "&Yes\n&No", 1) != 1
       call lh#path#munge(self.rejected_paths, a:file)
       return 0
     endif

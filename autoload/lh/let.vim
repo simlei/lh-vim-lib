@@ -55,34 +55,26 @@ function! s:BuildPublicVariableName(var, hide_or_overwrite, must_keep_previous) 
   if a:var !~ '\v^[wbptgP]:|[$&]'
     throw "Invalid variable name `".a:var."`: It should be scoped like in g:foobar"
   elseif a:var =~ '^P:'
-    call s:Verbose('s:BuildPublicVariableName: ^P!')
     " P: -> It's either a project variable if there is a project, or a buffer
     " variable otherwise
     if lh#project#is_in_a_project()
-      call s:Verbose('s:BuildPublicVariableName:   is in a project!')
       if a:must_keep_previous
-        call s:Verbose('s:BuildPublicVariableName:     must keep previous!')
         let value = lh#project#crt().get(matchstr(a:var, '\v^p\&=:\zs.*'))
         if lh#option#is_set(value)
-          call s:Verbose('s:BuildPublicVariableName:       %1 is set!', value)
           call s:Verbose("%1 is defined somewhere => no need to build its name, let's abort", a:var)
           return extend(copy(lh#option#unset()), {'_value': value})
           " No need to check anything,
         endif
       endif
       let var = lh#project#_crt_var_name('p'.a:var[1:], a:hide_or_overwrite)
-      call s:Verbose('s:BuildPublicVariableName:   otherwise write in %1', var)
     elseif a:var =~ '^P:[&$]'
       throw "Options and environment variable names like `".a:var."` are not supported. Use `p:` or plain variables."
     else
       let var = 'b'.a:var[1:]
-      call s:Verbose('s:BuildPublicVariableName:   buffer variable! %1', var)
     endif
   elseif a:var =~ '\v^p:|^\&p:'
-    call s:Verbose('s:BuildPublicVariableName: prj variable/option')
     " It's a p:roject variable, or a project option
     if a:must_keep_previous && lh#project#is_in_a_project()
-      call s:Verbose('s:BuildPublicVariableName:   must keep && in a project')
       let value = lh#project#crt().get(matchstr(a:var, '\v^p\&=:\zs.*'))
       if lh#option#is_set(value)
         call s:Verbose("%1 is defined somewhere => no need to build its name, let's abort", a:var)
@@ -91,10 +83,8 @@ function! s:BuildPublicVariableName(var, hide_or_overwrite, must_keep_previous) 
       endif
     endif
     let var = lh#project#_crt_var_name(a:var, a:hide_or_overwrite)
-    call s:Verbose('s:BuildPublicVariableName:   otherwise write in %1 (<- %2)', var, a:var)
   else
     let var = a:var
-    call s:Verbose('s:BuildPublicVariableName: default case (g:, b:, ...) %1', var)
   endif
   return var
 endfunction
@@ -105,16 +95,13 @@ function! s:BuildPublicVariableNameAndValue(must_keep_previous, ...) abort
   if len(a:000) == 1
     " Strip --overwrite/--hide option
     let [all, hide_or_overwrite, expr ; tail] = matchlist(a:1, '\v^%('.s:k_hide_or_overwite.'\s*)=(.*)$')
-    call s:Verbose('s:BuildPublicVariableNameAndValue: found: hide_or_overwrite=%1, expr=%2', hide_or_overwrite, expr)
     " Analyse the expression
     if expr =~ '^p:&'
       " options need a special handling
       let [all, var, assign, value0 ; dummy] = matchlist(expr, '^\v(\S{-})\s*([+-]=\=)\s*(.*)')
       let l:Value = assign.value0
-      call s:Verbose('s:BuildPublicVariableNameAndValue: found option')
     else
       let [all, var, value0 ; dummy] = matchlist(expr, '^\v(\S{-})%(\s*\=\s*|\s+)(.*)')
-      call s:Verbose('s:BuildPublicVariableNameAndValue: found var=value -> %1=%2', var, value0)
       " string+eval loses references, and it doesn't seem required.
 
       " Handle comments and assign value
@@ -133,7 +120,6 @@ function! s:BuildPublicVariableNameAndValue(must_keep_previous, ...) abort
     " let value = string(a:2)
   endif
   let resvar = s:BuildPublicVariableName(var, hide_or_overwrite, a:must_keep_previous)
-  call s:Verbose('s:BuildPublicVariableNameAndValue: return var=%1, val=%2', resvar, l:Value)
   return [resvar, l:Value]
 endfunction
 
