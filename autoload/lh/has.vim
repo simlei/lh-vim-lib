@@ -62,7 +62,9 @@ else
   function! lh#has#patch(vernumber) abort
     let [all, major, minor, patch; tail] = matchlist(a:vernumber, '\v^patch-(\d+)\.(\d+)[.-](\d+)$')
     let ver = eval(printf('%d%02d', major, minor))
-    return (v:version >= ver) || ((v:version == ver) && has('patch'.patch))
+    let res = (v:version >= ver) || ((v:version == ver) && has('patch'.patch))
+    call s:Verbose('check patch: ver: %1, patch: %2 -> %3', ver, patch, res)
+    return res
   endfunction
 endif
 
@@ -83,7 +85,7 @@ endfunction
 
 " Function: lh#has#default_in_getbufvar() {{{3
 function! lh#has#default_in_getbufvar() abort
-  return v:version > 703 || (v:version == 703 && has('patch831'))
+  " return v:version > 703 || (v:version == 703 && has('patch831'))
   return lh#has#patch("patch-7.3.831")
 endfunction
 
