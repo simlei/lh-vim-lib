@@ -83,7 +83,7 @@ endfunction
 
 " Function: lh#has#default_in_getbufvar() {{{3
 function! lh#has#default_in_getbufvar() abort
-  return 1
+  return 0
   return lh#has#patch("patch-7.3.831")
 endfunction
 
