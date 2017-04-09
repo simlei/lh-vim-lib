@@ -5,7 +5,7 @@
 " Version:      4.0.0.
 let s:k_version = '400'
 " Created:      03rd Apr 2017
-" Last Update:  03rd Apr 2017
+" Last Update:  09th Apr 2017
 "------------------------------------------------------------------------
 " Description:
 "       Unit tests for autoload/lh/has.vim
@@ -34,11 +34,13 @@ function! s:check_matchlist(str, major, minor, patch)
   AssertEquals(patch, a:patch)
 endfunction
 
-function! s:Test_matchlist()
+function! s:Test_matchlist ()
   call s:check_matchlist('patch-7.3.831', 7, 3, 831)
   call s:check_matchlist('patch-7.3-831', 7, 3, 831)
   call s:check_matchlist('patch-7.2.295', 7, 2, 295)
   call s:check_matchlist('patch-7.2-295', 7, 2, 295)
+
+  Comment "has patch-7.3.831: ".lh#has#default_in_getbufvar()
 endfunction
 
 " printf {{{2

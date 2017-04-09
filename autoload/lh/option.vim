@@ -283,8 +283,6 @@ endfunction
 if s:has_default_in_getbufvar
   function! lh#option#getbufvar(buf, name,...)
     let def = a:0 == 0 ? lh#option#unset('unknow option ['.a:buf.']:'.a:name) : a:1
-    let res = getbufvar(a:buf, a:name)
-    return empty(res) ? def : res
     return getbufvar(a:buf, a:name, def)
   endfunction
 else
