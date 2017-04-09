@@ -39,8 +39,6 @@ function! s:Test_matchlist ()
   call s:check_matchlist('patch-7.3-831', 7, 3, 831)
   call s:check_matchlist('patch-7.2.295', 7, 2, 295)
   call s:check_matchlist('patch-7.2-295', 7, 2, 295)
-
-  Comment "has patch-7.3.831: ".lh#has#default_in_getbufvar()
 endfunction
 
 " printf {{{2
