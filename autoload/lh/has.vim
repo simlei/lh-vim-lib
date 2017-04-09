@@ -54,8 +54,9 @@ endfunction
 " # Vim features {{{2
 
 " Function: lh#has#patch(vernumber) {{{3
-if v:version >= 704 || (v:version == 704 && has('patch237'))
+if (v:version >= 704) || (v:version == 704 && has('patch237'))
   function! lh#has#patch(vernumber) abort
+    call s:Verbose('builtin patch test')
     return has(a:vernumber)
   endfunction
 else
