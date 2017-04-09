@@ -79,7 +79,9 @@ function! s:Test_varnames() abort
 endfunction
 
 function! s:Test_create() " {{{2
+  call lh#has#verbose(1)
   Comment "lh#has#default_in_getbufvar: ".lh#has#default_in_getbufvar()
+  call lh#has#verbose(0)
   Comment "has patch-7.3.831: ".lh#has#patch("patch-7.3.831")
 
   let cleanup = lh#on#exit()
