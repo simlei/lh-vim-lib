@@ -63,8 +63,8 @@ else
   function! lh#has#patch(vernumber) abort
     let [all, major, minor, patch; tail] = matchlist(a:vernumber, '\v^patch-(\d+)\.(\d+)[.-](\d+)$')
     let ver = eval(printf('%d%02d', major, minor))
-    let res = (v:version >= ver) || ((v:version == ver) && has('patch'.patch))
-    call s:Verbose('check patch: ver: %1, patch: %2 -> %3', ver, patch, res)
+    let res = (v:version > ver) || ((v:version == ver) && has('patch'.patch))
+    call s:Verbose('check patch: ver: %1 (%4), patch: %2 (%5) -> %3', ver, patch, res, (v:version >= ver) ? '>=' : (v:version ==ver) ? '==' : '<', has('patch'.patch))
     return res
   endfunction
 endif
