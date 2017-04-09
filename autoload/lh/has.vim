@@ -83,6 +83,7 @@ endfunction
 
 " Function: lh#has#default_in_getbufvar() {{{3
 function! lh#has#default_in_getbufvar() abort
+  return v:version > 703 || (v:version == 703 && has('patch831'))
   return lh#has#patch("patch-7.3.831")
 endfunction
 
