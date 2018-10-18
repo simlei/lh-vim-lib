@@ -183,18 +183,14 @@ function! lh#project#_crt_var_name(var, ...) abort
   endif
   call s:Verbose('prj#_crt_var_name: kind: %1, name: %2', kind, name)
   if lh#project#is_in_a_project()
-    call s:Verbose('prj#_crt_var_name: is in a project')
     let hide_or_overwrite = get(a:, 1, '') " empty <=> 'hide'
     call lh#assert#value(hide_or_overwrite).match('\v\c(hide|overwrite|)')
     let shall_overwrite = hide_or_overwrite =~? 'overwrite'
-    call s:Verbose('prj#_crt_var_name: shall_overwrite ? %1 (%2)', shall_overwrite ? 'yes' : 'no', hide_or_overwrite)
     " TODO: Breaks old test => need to make a choice, or intrduce a new command ...
     if shall_overwrite
       let best_name = lh#project#_best_varname_match(kind, name)
-      call s:Verbose('prj#_crt_var_name: => best_name=%1', best_name)
     else
       let realname = 'b:'.s:project_varname.'.'.get(s:k_store_for, kind, 'variables').'.'.name
-      call s:Verbose('prj#_crt_var_name: => realname=%1', realname)
     endif
     if kind == 'v'
       return shall_overwrite ? best_name.realname : realname
@@ -291,7 +287,6 @@ function! lh#project#_best_varname_match(kind, name) abort
     endif
   endif
   " return 'b:'.s:project_varname.'.variables.'.a:name
-  call s:Verbose('prj#_best_varname_match(%1) -> return -> %2', a:, res)
   return res
 endfunction
 " # Find project root {{{2

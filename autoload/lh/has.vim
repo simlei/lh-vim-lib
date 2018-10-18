@@ -5,7 +5,7 @@
 " Version:      4.5.0
 let s:k_version = '400500'
 " Created:      02nd Sep 2016
-" Last Update:  17th Aug 2018
+" Last Update:  18th Oct 2018
 "------------------------------------------------------------------------
 " Description:
 "       Synthetize compatibility options.
@@ -59,7 +59,7 @@ else
   function! lh#has#patch(vernumber) abort
     let [all, major, minor, patch; tail] = matchlist(a:vernumber, '\v^patch-(\d+)\.(\d+)[.-](\d+)$')
     let ver = eval(printf('%d%02d', major, minor))
-    return (v:version > ver) || (v:version == ver && has('patch'.patch))
+    return (v:version > ver) || ((v:version == ver) && has('patch'.patch))
   endfunction
 endif
 

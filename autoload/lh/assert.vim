@@ -60,7 +60,6 @@ endfunction
 "
 " Function: lh#assert#_trace_assert(msg) {{{2
 function! lh#assert#_trace_assert(msg) abort
-  call s:Verbose("Assertion failed w/ msg: %1 -- let's compute the callstack", a:msg)
   let cb = lh#exception#callstack_as_qf('', a:msg)
   " let g:cb = copy(cb)
   if len(cb) > 2

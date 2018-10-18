@@ -87,6 +87,7 @@ plugin/words_tools.vim
 tests/lh/UT-fixpath.vim
 tests/lh/encoding.vim
 tests/lh/function.vim
+tests/lh/has.vim
 tests/lh/list.vim
 tests/lh/math.vim
 tests/lh/path.vim
