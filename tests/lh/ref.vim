@@ -2,8 +2,8 @@
 " File:         tests/lh/ref.vim                                  {{{1
 " Author:       Luc Hermitte <EMAIL:luc {dot} hermitte {at} gmail {dot} com>
 "		<URL:http://github.com/LucHermitte/lh-vim-lib>
-" Version:      4.6.0.
-let s:k_version = '40600'
+" Version:      4.6.4.
+let s:k_version = '40604'
 " Created:      09th Sep 2016
 " Last Update:  18th Oct 2018
 "------------------------------------------------------------------------
@@ -29,16 +29,27 @@ runtime plugin/let.vim
 
 "------------------------------------------------------------------------
 " ## Fixtures {{{1
+let s:prj_varname = 'b:'.get(g:, 'lh#project#varname', 'crt_project')
 function! s:Setup() abort
+  let s:prj_list = copy(lh#project#list#_save())
   let s:cleanup = lh#on#exit()
         \.restore('g:dummy')
         \.restore('b:dummy')
+        \.restore('b:'.s:prj_varname)
+        \.restore('s:prj_varname')
+        \.restore('g:lh#project.auto_discover_root')
+        " \.register({-> lh#project#list#_restore(s:prj_list)})
+  let g:lh#project = { 'auto_discover_root': 'no' }
+  if exists('b:'.s:prj_varname)
+    exe 'unlet b:'.s:prj_varname
+  endif
   Unlet g:dummy
   Unlet b:dummy
 endfunction
 
 function! s:Teardown() abort
   call s:cleanup.finalize()
+  call lh#project#list#_restore(s:prj_list)
 endfunction
 
 " ## Tests {{{1
@@ -139,6 +150,7 @@ function! s:Test_scoped() " {{{2
 
     unlet b:dummy
     Assert ! has_key(b:, 'dummy')
+    AssertEqual(lh#option#get('dummy'), g:__d)
     AssertIs(res.resolve(), g:__d)
   finally
     Unlet g:__d
