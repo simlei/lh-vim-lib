@@ -7,7 +7,7 @@
 " Version:      4.0.0
 let s:k_version = 4000
 " Created:      10th Sep 2012
-" Last Update:  09th Mar 2017
+" Last Update:  28th Sep 2017
 "------------------------------------------------------------------------
 " Description:
 "       Defines a command :LetIfUndef that sets a variable if undefined
@@ -117,8 +117,13 @@ function! s:BuildPublicVariableNameAndValue(must_keep_previous, ...) abort
       call s:Verbose('s:BuildPublicVariableNameAndValue: found var=value -> %1=%2', var, value0)
       " string+eval loses references, and it doesn't seem required.
 
-      " Handle comments and assign value
-      exe 'let l:Value = '.value0
+      " Handle comments and assign value, but this seems to mess with error
+      " messages...
+      try
+        exe 'let l:Value = '.value0
+      catch /.*/
+        throw "Cannot assign `".string(value0)."`  into ".var.": ".v:exception
+      endtry
       " The following
       "    " Simplified handling of comments
       "    :let value0 = substitute(value0, '\v^("[^"]*"|[^"])*\zs"[^"]*$', '', '')
@@ -426,9 +431,7 @@ endfunction
 " Function: lh#let#_push_options(variable, ...) {{{3
 function! lh#let#_push_options(variable, ...) abort
   let var = lh#let#if_undef(a:variable, [])
-  for val in a:000
-    call lh#list#push_if_new(var, val)
-  endfor
+  call map(copy(a:000), 'lh#list#push_if_new(var, v:val)')
   return var
 endfunction
 

@@ -5,10 +5,10 @@
 " License:      GPLv3 with exceptions
 "               <URL:http://github.com/LucHermitte/lh-vim-lib/tree/master/License.md>
 " Licence:      GPLv3
-" Version:	4.0.0
-let s:k_version = '40000'
+" Version:	4.6.3
+let s:k_version = '40603'
 " Created:	23rd Jan 2007
-" Last Update:	02nd Dec 2016
+" Last Update:	10th Sep 2018
 "------------------------------------------------------------------------
 " Description:
 " 	Defines functions that help finding windows and handling buffers.
@@ -107,7 +107,17 @@ endfunction
 function! lh#buffer#jump(filename, cmd) abort
   let b = lh#buffer#find(a:filename)
   if b != -1 || type(a:filename) == type(0) | return b | endif
-  call lh#window#create_window_with(a:cmd . ' ' . a:filename)
+  try
+    call lh#window#create_window_with(a:cmd . ' ' . a:filename)
+  catch /E325/
+    " The file opened had a swap file...
+    if bufwinnr(a:filename) != winnr()
+      " but instead of chosing to open it, the user refused
+      " => rethrow the error
+      throw "A swap file was associated to ".a:filename.", but you rejected opening the file (".v:exception.")."
+      " It seems that "abort" case cannot be recognized
+    endif
+  endtry
   return winnr()
 endfunction
 function! lh#buffer#Jump(filename, cmd) abort
@@ -118,7 +128,7 @@ endfunction
 function! lh#buffer#scratch(bname, where) abort
   try
     set modifiable
-    call lh#window#create_window_with(a:where.' sp '.escape(substitute(a:bname, '\*', '...', 'g'), '#%'))
+    call lh#window#create_window_with(a:where.' sp '.fnameescape(substitute(a:bname, '\*', '...', 'g')))
   catch /.*/
     throw "Can't open a buffer named '".a:bname."'!"
   endtry

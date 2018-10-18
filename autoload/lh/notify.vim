@@ -1,14 +1,14 @@
 "=============================================================================
-" File:         autoload/lh/type.vim                              {{{1
+" File:         autoload/lh/notify.vim                            {{{1
 " Author:       Luc Hermitte <EMAIL:luc {dot} hermitte {at} gmail {dot} com>
 "		<URL:http://github.com/LucHermitte/lh-vim-lib>
-" Version:      4.0.0.0.
-let s:k_version = '4000'
-" Created:      20th Feb 2017
-" Last Update:  10th Apr 2017
+" Version:      4.6.3.
+let s:k_version = '463'
+" Created:      24th Jul 2017
+" Last Update:  10th Sep 2018
 "------------------------------------------------------------------------
 " Description:
-"       Helper functions around |type()|
+"       API to notify things once
 "
 "------------------------------------------------------------------------
 " History:      «history»
@@ -21,13 +21,13 @@ set cpo&vim
 "------------------------------------------------------------------------
 " ## Misc Functions     {{{1
 " # Version {{{2
-function! lh#type#version()
+function! lh#notify#version()
   return s:k_version
 endfunction
 
 " # Debug   {{{2
 let s:verbose = get(s:, 'verbose', 0)
-function! lh#type#verbose(...)
+function! lh#notify#verbose(...)
   if a:0 > 0 | let s:verbose = a:1 | endif
   return s:verbose
 endfunction
@@ -42,58 +42,36 @@ function! s:Verbose(expr, ...)
   endif
 endfunction
 
-function! lh#type#debug(expr) abort
+function! lh#notify#debug(expr) abort
   return eval(a:expr)
 endfunction
 
 
 "------------------------------------------------------------------------
 " ## Exported functions {{{1
-" Function: lh#type#name(type) {{{2
-let s:names =
-      \{ type(0)              : 'number'
-      \, type('')             : 'string'
-      \, type(function('has')): 'funcref'
-      \, type([])             : 'list'
-      \, type({})             : 'dictionary'
-      \, type(0.0)            : 'float'
-      \, 8                    : 'job'
-      \, 9                    : 'channel'
-      \ }
-if exists('v:true')
-  let s:names[v:true] = 'bool'
-  let s:names[v:false] = 'bool'
-endif
-if exists('v:none')
-  let s:names[v:none] = 'None'
-endif
-function! lh#type#name(type) abort
-  return get(s:names, a:type, 'unknown')
+
+" Function: lh#notify#clear_notifications() {{{2
+function! lh#notify#clear_notifications() abort
+  let s:notifications = {}
+endfunction
+call lh#notify#clear_notifications()
+
+" Function: lh#notify#once(id [, text]) {{{2
+function! lh#notify#once(id, ...) abort
+  let result = get(s:notifications, a:id, 0)
+  if ! result
+    let msg = a:0 > 0 ? call('lh#fmt#printf', a:000) : a:id
+    call s:Verbose('%1', msg)
+    call lh#common#warning_msg(msg)
+    let s:notifications[a:id] = 1
+  endif
+  return result
 endfunction
 
-" Function: lh#type#is_dict(value) {{{2
-function! lh#type#is_dict(value) abort
-  return type(a:value) == type({})
-endfunction
-
-" Function: lh#type#is_list(value) {{{2
-function! lh#type#is_list(value) abort
-  return type(a:value) == type([])
-endfunction
-
-" Function: lh#type#is_funcref(value) {{{2
-function! lh#type#is_funcref(value) abort
-  return type(a:value) == type(function('has'))
-endfunction
-
-" Function: lh#type#is_string(value) {{{2
-function! lh#type#is_string(value) abort
-  return type(a:value) == type('')
-endfunction
-
-" Function: lh#type#is_number(value) {{{2
-function! lh#type#is_number(value) abort
-  return type(a:value) == type(0)
+" Function: lh#notify#deprecated(old, new) {{{2
+function! lh#notify#deprecated(old, new) abort
+  " TODO: add feature to know where the call has been made
+  call lh#notify#once(a:old, 'Warning %1 is deprecated, use %2 now.', a:old, a:new)
 endfunction
 
 "------------------------------------------------------------------------

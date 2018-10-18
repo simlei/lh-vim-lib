@@ -4,10 +4,10 @@
 "               <URL:http://github.com/LucHermitte/lh-vim-lib>
 " License:      GPLv3 with exceptions
 "               <URL:http://github.com/LucHermitte/lh-vim-lib/tree/master/License.md>
-" Version:      4.0.0
-let s:k_version = '40000'
+" Version:      4.6.4
+let s:k_version = '40604'
 " Created:      26th Nov 2015
-" Last Update:  02nd Mar 2017
+" Last Update:  18th Oct 2018
 "------------------------------------------------------------------------
 " Description:
 "       |Dict| helper functions
@@ -76,6 +76,33 @@ function! lh#dict#let(dict, key, value) abort
   endif
   return a:dict[key]
 endfunction
+
+" Function: lh#dict#need_ref_on(root, keys [, last_default]) {{{3
+" @since Version 4.5.0
+" @return the element at the key sequence. subkeys are added on the fly
+" @note it'll be best for last_default to be either a dictionary or a
+" list, otherwise, the result won't be a reference
+function! lh#dict#need_ref_on(root, keys, ...) abort
+  let keys = type(a:keys) == type([]) ? a:keys : split(a:keys, '\.')
+  let last_default = get(a:, 1, {})
+  let d = a:root
+  for k in keys[:-2]
+    if !has_key(d, k)
+      let d[k] = {}
+    endif
+    let dk = d[k]
+    unlet d
+    let d = dk
+    unlet dk
+    call lh#assert#type(d).is({})
+  endfor
+  if !has_key(d, keys[-1])
+    let d[keys[-1]] = last_default
+  endif
+  return d[keys[-1]]
+endfunction
+
+"------------------------------------------------------------------------
 " # Dictionary in read-only {{{2
 
 " Function: lh#dict#key(one_key_dict) {{{3
@@ -89,15 +116,7 @@ endfunction
 
 " Function: lh#dict#subset(dict, keys) {{{3
 function! lh#dict#subset(dict, keys) abort
-  let result={}
-  for e in a:keys
-    let Val = get(a:dict, e, s:k_unset)
-    if lh#option#is_set(Val)
-      let result[e] = Val
-    endif
-    unlet Val
-  endfor
-  return result
+  return filter(copy(a:dict), 'index(a:keys, v:key) >= 0')
 endfunction
 
 " Function: lh#dict#get_composed(dst, key[, def]) {{{3
@@ -120,7 +139,6 @@ function! lh#dict#get_composed(dst, key, ...) abort
   endtry
 endfunction
 
-"------------------------------------------------------------------------
 " ## Internal functions {{{1
 
 "------------------------------------------------------------------------

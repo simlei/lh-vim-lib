@@ -4,10 +4,10 @@
 "               <URL:http://github.com/LucHermitte/lh-vim-lib>
 " License:      GPLv3 with exceptions
 "               <URL:http://github.com/LucHermitte/lh-vim-lib/tree/master/License.md>
-" Version:      4.0.0
-let s:k_version = 40000
+" Version:      4.6.4
+let s:k_version = 40604
 " Created:      23rd Jan 2007
-" Last Update:  07th Mar 2017
+" Last Update:  26th Sep 2018
 "------------------------------------------------------------------------
 " Description:
 "       Functions related to the handling of pathnames
@@ -108,6 +108,14 @@ let s:k_version = 40000
 "       (*) Add `lh#path#is_up_to_date()`
 "       (*) Improve `lh#path#strip_start()` performances
 "       (*) lh#path#split('/foo') will now return 2 elements
+"       (*) Recognize empty name buffer as scratch/distant
+"       (*) PERF: Improve performances
+"       v4.6.1
+"       (*) PORT: Provide `lh#path#exe()`
+"       v4.6.3
+"       (*) PORT: Use `lh#ui#confirm()`
+"       v4.6.4
+"       (*) BUG: Apply `readlink()` to `munge()`
 " TODO:
 "       (*) Fix #simplify('../../bar')
 " }}}1
@@ -331,7 +339,7 @@ endfunction
 
 " Function: lh#path#is_distant_or_scratch(path) {{{3
 function! lh#path#is_distant_or_scratch(path) abort
-  return a:path =~ '\v://|^//|^\\\\'
+  return a:path =~ '\v://|^//|^\\\\|^$'
         \ || getbufvar(bufnr(a:path), '&buftype') =~ 'nofile\|quickfix'
 endfunction
 
@@ -341,11 +349,11 @@ function! lh#path#select_one(pathnames, prompt) abort
     let simpl_pathnames = deepcopy(a:pathnames)
     let simpl_pathnames = lh#path#strip_common(simpl_pathnames)
     let simpl_pathnames = [ '&Cancel' ] + map(simpl_pathnames, 'substitute(v:val, "_", "&&", "g")')
-    " Consider guioptions+=c is case of difficulties with the gui
+    " Consider guioptions+=c in case of difficulties with the gui
     try
       let guioptions_save = &guioptions
       set guioptions+=v
-      let selection = confirm(a:prompt, join(simpl_pathnames,"\n"), 1, 'Question')
+      let selection = lh#ui#confirm(a:prompt, join(simpl_pathnames,"\n"), 1, 'Question')
     finally
       let &guioptions = guioptions_save
     endtry
@@ -420,14 +428,16 @@ function! lh#path#relative_to(from, to) abort
   " cannot rely on :cd (as it alters things, and doesn't work with
   " non-existant paths)
   let pwd = getcwd()
-  exe 'cd '.a:to
+  call lh#path#cd_without_sideeffects(a:to)
   let res = lh#path#to_relative(a:from)
-  exe 'cd '.pwd
+  call lh#path#cd_without_sideeffects(pwd)
   return res
 endfunction
 
 " Function: lh#path#glob_as_list({pathslist}, {expr} [, mustSort=1]) {{{3
-if has("patch-7.4-279")
+if has("patch-7.4.279") || (v:version == 704 && has('patch279'))
+  " Either version >= 7.4.237 and `has('patch-7.4.279')` detects correctly, or
+  " we can fall back to old detection, assuming that we still need to test v 7.4,
   function! s:DoGlobPath(pathslist, expr) abort
     let pathslist = type(a:pathslist) == type([]) ? join(a:pathslist, ',') : a:pathslist
     return globpath(pathslist, a:expr, 1, 1)
@@ -458,9 +468,10 @@ function! lh#path#glob_as_list(pathslist, expr, ...) abort
     return s:GlobAsList(a:pathslist, a:expr, mustSort)
   elseif type(a:expr) == type([])
     let res = []
-    for expr in a:expr
-      call extend(res, s:GlobAsList(a:pathslist, expr, mustSort))
-    endfor
+    call map(copy(a:expr), 'extend(res, s:GlobAsList(a:pathslist, v:val, mustSort))')
+    " for expr in a:expr
+      " call extend(res, s:GlobAsList(a:pathslist, expr, mustSort))
+    " endfor
     return res
   else
     throw "Unexpected type for a:expression"
@@ -491,7 +502,7 @@ function! s:prepare_pathlist_for_strip_start(pathslist)
   let pathslist_abs=filter(copy(pathslist), 'v:val =~ "^\\.\\%(/\\|$\\)"')
   let pathslist += pathslist_abs
   " replace path separators by a regex that can match them
-  call map(pathslist, 'substitute(v:val, "[\\\\/]", "[\\\\/]", "g")')
+  call map(pathslist, 'substitute(v:val, "[\\\\/]", "[\\\\/]", "g")."[\\/]\\="')
   " echomsg string(pathslist)
   " escape . and ~
   call map(pathslist, '"^".escape(v:val, ".~")')
@@ -502,30 +513,20 @@ function! s:prepare_pathlist_for_strip_start(pathslist)
 
   return pathslist
 endfunction
+
+function! s:find_best_match(pathname, pathslist) abort
+  let matches = map(copy(a:pathslist), 'substitute(a:pathname, v:val, "", "")')
+  let best_match_idx = lh#list#arg_min(matches, function('len'))
+  return matches[best_match_idx]
+endfunction
+
 function! lh#path#strip_start(pathname, pathslist) abort
   let pathslist = s:prepare_pathlist_for_strip_start(a:pathslist)
-  if 0
-    " build the strip regex
-    let strip_re = join(pathslist, '\|')
-    " echomsg strip_re
-    let best_match = substitute(a:pathname, '\%('.strip_re.'\)[/\\]\=', '', '')
+  if !empty(pathslist)
+    let pathnames = type(a:pathname) == type([]) ? copy(a:pathname) : [a:pathname]
+    let res = map(pathnames, 's:find_best_match(v:val, pathslist)')
   else
-    if !empty(pathslist)
-      let pathnames = type(a:pathname) == type([]) ? a:pathname : [a:pathname]
-      let res = []
-      for pathname in pathnames
-        let best_match = substitute(pathname, '^\%('.pathslist[0].'\)[/\\]\=', '', '')
-        for path in pathslist[1:]
-          let a_match = substitute(pathname, '^\%('.path.'\)[/\\]\=', '', '')
-          if len(a_match) < len(best_match)
-            let best_match = a_match
-          endif
-        endfor " each pathslist
-        let res += [best_match]
-      endfor " each pathnames
-    else
-      let res = a:pathname
-    endif
+    let res = a:pathname
   endif
   return type(a:pathname) == type([]) ? res : res[0]
 endfunction
@@ -549,11 +550,32 @@ function! lh#path#find(paths, regex) abort
   return empty(paths) ? '' : paths[shortest]
 endfunction
 
+" Function: lh#path#find_upward(what, [from=expand('%:p:h')]) {{{3
+function! lh#path#find_upward(what, ...) abort
+  call lh#assert#value(a:what).not().empty()
+  let path = a:0 == 0 ? expand('%:p:h') : a:1
+  call lh#assert#value(path).not().verifies('lh#path#is_distant_or_scratch')
+  if a:what[-1 : ] == '/' " directory name
+    let r = finddir(a:what, path. ';')
+    let mod = ':p:h:h'
+    let node_exist = 'isdirectory'
+  else
+    let r = findfile(a:what, path. ';')
+    let mod = ':p:h'
+    let node_exist = 'filereadable'
+  endif
+  if !empty(r)
+    let r = fnamemodify(r, mod)
+    call lh#assert#value(r.'/'.a:what).verifies(node_exist)
+  endif
+  return r
+endfunction
+
 " Function: lh#path#vimfiles() {{{3
 function! lh#path#vimfiles() abort
   let re_HOME = lh#path#to_regex($HOME.'/')
   let re_LUCHOME = exists('$LUCHOME') ? '\|'.lh#path#to_regex($LUCHOME.'/'): ''
-  let what =  '\%('.re_HOME.re_LUCHOME.'\)'.'\(vimfiles\|.vim\)'
+  let what = '\%('.re_HOME.re_LUCHOME.'\)'.'\(vimfiles\|.vim\|.config[/\\]nvim\)'
   " Comment what
   let z = lh#path#find(&rtp,what)
   return z
@@ -681,24 +703,52 @@ function! lh#path#find_in_parents(path, path_patterns, kinds, last_valid_path) a
   return res
 endfunction
 
-" Function: lh#path#munge(pathlist, path) {{{3
-function! lh#path#munge(pathlist, path) abort
+" Function: lh#path#munge(pathlist, path [, sep]) {{{3
+function! lh#path#munge(pathlist, path, ...) abort
+  let path = lh#path#readlink(a:path)
   if type(a:pathlist) == type('str')
-    let pathlist = split(a:pathlist, ',')
-    return join(lh#path#munge(pathlist, a:path), ',')
+    let sep = get(a:, 1, ',')
+    let pathlist = split(a:pathlist, sep)
+    return join(lh#path#munge(pathlist, path), sep)
   else
-    " if filereadable(a:path) || isdirectory(a:path)
-    if ! empty(glob(a:path))
-      call lh#list#push_if_new(a:pathlist, a:path)
+    " if filereadable(path) || isdirectory(path)
+    if ! empty(glob(path))
+      call lh#list#push_if_new(a:pathlist, path)
     endif
     return a:pathlist
   endif
 endfunction
 
+" Function: lh#path#exe(pathname) {{{3
+" @return the full path of an executable; emulate |exepath()| on old Vim
+" versions
+" @since Version 4.6.1
+if exists('*exepath')
+  function! lh#path#exe(exe) abort
+    return exepath(a:exe)
+  endfunction
+else
+  function! lh#path#exe(exe) abort
+    let PATH = join(split($PATH, has('unix') ? ':' : ';'), ',')
+    return join(filter(split(globpath(PATH, a:exe), "\n"), 'executable(v:val)')[:0], '')
+  endfunction
+endif
+
 " Function: lh#path#exists(pathname) {{{3
 " @return whether the file is readable or a buffer with the same name exists
 function! lh#path#exists(pathname) abort
   return filereadable(a:pathname) || bufexists(a:pathname)
+endfunction
+
+" Function: lh#path#writable(pathname) {{{3
+" @return whether the file exists and is writable, or whether it could be
+" created in the requested directory
+" Unlike |filewritable()|, non existing files aren't rejected.
+" @since Version 4.6.0
+function! lh#path#writable(pathname) abort
+  return isdirectory(a:pathname)
+        \ ? filewritable(a:pathname)
+        \ : filewritable(a:pathname) || 2 == filewritable(fnamemodify(a:pathname, ':h'))
 endfunction
 
 " Function: lh#path#is_up_to_date(file1, file2) {{{3
@@ -712,6 +762,15 @@ function! lh#path#is_up_to_date(file1, file2) abort
     return d1 <= d2
   endif
   return 0
+endfunction
+
+" Function: lh#path#cd_without_sideeffects(path) {{{3
+" @since Version 4.0.0
+function! lh#path#cd_without_sideeffects(path) abort
+  let cd = exists('*haslocaldir') && haslocaldir()
+        \ ? 'lcd '
+        \ : 'cd '
+  exe cd . a:path
 endfunction
 
 " # Permission lists {{{2
@@ -786,7 +845,7 @@ function! s:lists_handle_file(file, permission) dict abort
     call s:Verbose('Path %1 has already been validated for this session.', a:file)
     " TODO: add a way to remove pathnames from validated list
   elseif a:permission == 'asklist'
-    let choice = CONFIRM('Do you want to '. self._action_name. ' "'.a:file.'"?', "&Yes\n&No\n&Always\nNe&ver", 1)
+    let choice = lh#ui#confirm('Do you want to '. self._action_name. ' "'.a:file.'"?', "&Yes\n&No\n&Always\nNe&ver", 1)
     if choice == 3 " Always
       call s:Verbose("Add %1 to current session whitelist", a:file)
       call lh#path#munge(self.valided_paths, a:file)
@@ -834,7 +893,7 @@ function! s:lists_is_file_accepted(file, permission) dict abort
     call s:Verbose('Path %1 has already been validated.')
     " TODO: add a way to remove pathnames from validated list
   elseif a:permission == 'asklist'
-    if CONFIRM('Do you want to '. self._action_name. ' "'.a:file.'"?', "&Yes\n&No", 1) != 1
+    if lh#ui#confirm('Do you want to '. self._action_name. ' "'.a:file.'"?', "&Yes\n&No", 1) != 1
       call lh#path#munge(self.rejected_paths, a:file)
       return 0
     endif

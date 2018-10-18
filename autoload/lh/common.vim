@@ -4,10 +4,10 @@
 "               <URL:http://github.com/LucHermitte/lh-vim-lib>
 " License:      GPLv3 with exceptions
 "               <URL:http://github.com/LucHermitte/lh-vim-lib/tree/master/License.md>
-" Version:	3.6.1
-let s:k_version = 361
+" Version:	4.5.0
+let s:k_version = 450
 " Created:	07th Oct 2006
-" Last Update:	08th Jan 2016
+" Last Update:	14th Jun 2018
 "------------------------------------------------------------------------
 " Description:
 " 	Some common functions for:
@@ -16,8 +16,12 @@ let s:k_version = 361
 "
 "------------------------------------------------------------------------
 " Requirements:
-" 	ruby enabled for lh#common#rand()
+" 	ruby, or python enabled for lh#common#rand()
 " History:
+"       v4.5.0:
+"       - REFACT: Try to use the the best python flavour available
+"       v4.0.0:
+"       - ENH: Define other implementations of lh#common#rand
 "       v3.6.1
 "       - ENH: Use new logging framework
 "       v3.1.17
@@ -95,14 +99,81 @@ function! lh#common#CheckDeps(Symbol, File, path, plugin) " {{{3
   return lh#common#check_deps(a:Symbol, a:File, a:path, a:plugin)
 endfunction
 
-" Function: lh#common#rand(max) {{{3
+" Function: lh#common#rand(max) {{{2
 " This function requires ruby, and it may move to another autoload plugin
-function! lh#common#rand(max)
+if has('ruby')
+  function! lh#common#rand_ruby(max)
     ruby << EOF
     rmax = VIM::evaluate("a:max")
     rmax = nil if rmax == ""
     VIM::command("return #{rand(rmax).inspect}")
 EOF
+  endfunction
+  let s:random = get(s:, 'random', 'ruby')
+endif
+
+if !exists('s:random')
+  let py_flavour = lh#python#best_still_avail()
+  if !empty(py_flavour)
+    function! lh#common#rand_python3(max)
+python3 << EOF
+import vim, random
+rmax = eval(vim.eval("a:max")) - 1
+# rmax = nil if rmax == ""
+res = random.randint(0, rmax)
+vim.command("return %d" % (res,))
+EOF
+    endfunction
+    function! lh#common#rand_python(max)
+python << EOF
+import vim, random
+rmax = eval(vim.eval("a:max")) - 1
+# rmax = nil if rmax == ""
+res = random.randint(0, rmax)
+vim.command("return %d" % (res,))
+EOF
+    endfunction
+    let s:random = get(s:, 'random', py_flavour)
+  endif
+endif
+
+if lh#os#system_detected() == 'unix'
+  " This flavour is very slow, and best avoided!
+  function! lh#common#rand_unix(max)
+    let nb_bytes = float2nr(log(a:max-1)/s:k_lg256)+1
+    let rnd = matchstr(system('echo $RANDOM'), '\d\+')
+    let res = rnd % a:max
+    return res
+  endfunction
+  let s:random = get(s:, 'random', 'dev_unix')
+endif
+
+if lh#os#system_detected() == 'windows'
+  " This flavour is very slow, and best avoided!
+  function! lh#common#rand_unix(max)
+    let nb_bytes = float2nr(log(a:max-1)/s:k_lg256)+1
+    let rnd = matchstr(system('echo %RANDOM%'), '\d\+')
+    let res = rnd % a:max
+    return res
+  endfunction
+  let s:random = get(s:, 'random', 'dev_windows')
+endif
+
+if filereadable('/dev/urandom') && has('float')
+  " This flavour is very slow!
+  let s:k_lg256 = log(256)
+  function! lh#common#rand_dev_urandom(max)
+    let nb_bytes = float2nr(log(a:max-1)/s:k_lg256)+1
+    let rnd = matchstr(system('od -A n -t d -N '.nb_bytes.' /dev/urandom'), '\d\+')
+    let res = rnd % a:max
+    return res
+  endfunction
+  let s:random = get(s:, 'random', 'dev_urandom')
+endif
+
+function! lh#common#rand(max)
+  call lh#assert#value(s:).has_key('random')
+  return lh#common#rand_{s:random}(a:max)
 endfunction
 " Functions }}}1
 "------------------------------------------------------------------------

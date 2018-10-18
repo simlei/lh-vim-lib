@@ -2,10 +2,10 @@
 " File:         autoload/lh/assert.vim                            {{{1
 " Author:       Luc Hermitte <EMAIL:luc {dot} hermitte {at} gmail {dot} com>
 "		<URL:http://github.com/LucHermitte/lh-vim-lib>
-" Version:      4.0.0.0.
-let s:k_version = '4000'
+" Version:      4.6.0.
+let s:k_version = '40603'
 " Created:      23rd Nov 2016
-" Last Update:  08th Mar 2017
+" Last Update:  10th Sep 2018
 "------------------------------------------------------------------------
 " Description:
 "       Emulates assert_*() functions, but notifies as soon as possible that
@@ -253,7 +253,7 @@ function! s:is_lt(ref, ...) dict abort " {{{4
   return self
 endfunction
 function! s:is_le(ref, ...) dict abort " {{{4
-  if ! self.__eval(self.actual w= a:ref)
+  if ! self.__eval(self.actual <= a:ref)
     let msg = a:0 > 0 ? a:1 : 'Expected '.string(self.actual).' to be lesser or equal to '.string(a:ref)
     call lh#assert#_trace_assert(msg)
   endif
@@ -303,7 +303,7 @@ endfunction
 
 function! s:empty(...) dict abort " {{{4
   if ! self.__eval(empty(self.actual))
-    let msg = a:0 > 0 ? a:1 : 'Variable is not empty but contain: '.string(a:pattern)
+    let msg = a:0 > 0 ? a:1 : 'Variable is not empty but contain: '.string(self.actual)
     call lh#assert#_trace_assert(msg)
   endif
   return self
@@ -322,16 +322,34 @@ function! s:is_unset(...) dict abort " {{{4
   endif
   return self
 endfunction
-" Pre-built #value() result
 function! s:verifies(func, ...) dict abort "{{{4
   let args = get(a:, 1, [])
   if ! self.__eval( (type(a:func)==type('') && lh#type#is_dict(self.actual) && has_key(self.actual, a:func)) ? call(self.actual[a:func], args, self.actual) : call(a:func, [self.actual]+args))
-    let msg = a:0 > 0 ? a:2 : lh#string#as(self.actual)." doesn't verify: ".a:func
+    let msg = a:0 > 0 ? a:2 : lh#string#as(self.actual)." doesn't verify: ".string(a:func)
     call lh#assert#_trace_assert(msg)
   endif
   return self
 endfunction
-function! s:pre_build_value() abort " {{{4
+function! s:get(id, ...) dict abort " {{{4
+  if     type(self.actual) == type({})
+    call call(self.has_key, [a:id] + a:000, self)
+  elseif type(self.actual) == type([])
+    let actual = self.actual " because I share a common global objet => need to save the actual value tested
+    call lh#assert#type(a:id).is(42, 'Expected a number as index in an array, got '.string(a:id))
+    call lh#assert#value(len(actual)).is_gt(a:id, 'Expected the index ('.a:id.') to be lesser than the number of elements ('.len(actual).'): '.string(actual))
+    let self.actual = actual
+  else
+    call lh#assert#unexpected('Expected a dictionary or an array. Got a '.lh#type#name(type(self.actual)).': '.string(self.actual))
+    return self
+  endif
+  " We should not get an unset element here given the previous tests
+  let element = get(self.actual, a:id)
+  let self.actual = element
+  return self
+endfunction
+
+" Pre-built #value() result " {{{4
+function! s:pre_build_value() abort
   let res = lh#object#make_top_type({})
   let res.__eval     = function(s:getSNR('__eval'))
   let res.not        = function(s:getSNR('not'))
@@ -340,13 +358,14 @@ function! s:pre_build_value() abort " {{{4
   let res.is_gt      = function(s:getSNR('is_gt'))
   let res.is_ge      = function(s:getSNR('is_ge'))
   let res.eq         = function(s:getSNR('eq'))
-  let res.diff       = function(s:getSNR('diff'))
+  let res.differ     = function(s:getSNR('diff'))
   let res.match      = function(s:getSNR('match'))
   let res.has_key    = function(s:getSNR('has_key'))
   let res.empty      = function(s:getSNR('empty'))
   let res.is_set     = function(s:getSNR('is_set'))
   let res.is_unset   = function(s:getSNR('is_unset'))
   let res.verifies   = function(s:getSNR('verifies'))
+  let res.get        = function(s:getSNR('get'))
 
   let ignored = lh#object#make_top_type({})
   let ignored.not      = function(s:getSNR('__ignore'))
@@ -355,29 +374,31 @@ function! s:pre_build_value() abort " {{{4
   let ignored.is_gt    = ignored.not
   let ignored.is_ge    = ignored.not
   let ignored.eq       = ignored.not
-  let ignored.diff     = ignored.not
+  let ignored.differ   = ignored.not
   let ignored.match    = ignored.not
   let ignored.has_key  = ignored.not
   let ignored.empty    = ignored.not
   let ignored.is_set   = ignored.not
   let ignored.is_unset = ignored.not
   let ignored.verifies = ignored.not
+  let ignored.get      = ignored.not
   return [res, ignored]
 endfunction
 let [s:value_default, s:value_ignore] = s:pre_build_value()
 
-function! lh#assert#value(actual) abort " {{{4
+function! lh#assert#value(actual) abort " {{{3
   " We use and modify a global object, but this is not a problem
   let res = lh#assert#_shall_ignore() ? s:value_ignore : s:value_default
   let res.actual = a:actual
   return res
 endfunction
 
-" Function: lh#assert#type(actual) {{{3
-function! s:type_is(expected) dict abort " {{{4
+" Function: lh#assert#type(actual [, message]) {{{3
+function! s:type_is(expected, ...) dict abort " {{{4
   let t_actual = type(self.actual)
   if ! self.__eval(t_actual == type(a:expected))
-    call lh#assert#_trace_assert('Expected '.string(self.actual).' to be a '.lh#type#name(type(a:expected)).' not a '.lh#type#name(t_actual))
+    let msg = a:0 > 0 ? a:1 : 'Expected '.string(self.actual).' to be a '.lh#type#name(type(a:expected)).' not a '.lh#type#name(t_actual)
+    call lh#assert#_trace_assert(msg)
   endif
   return self
 endfunction

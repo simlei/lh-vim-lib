@@ -4,10 +4,10 @@
 "               <URL:http://github.com/LucHermitte/lh-vim-lib>
 " License:      GPLv3 with exceptions
 "               <URL:http://github.com/LucHermitte/lh-vim-lib/tree/master/License.md>
-" Version:      4.0.0
-let s:k_version = '40000'
+" Version:      4.6.4
+let s:k_version = '40604'
 " Created:      01st Dec 2015
-" Last Update:  09th Feb 2017
+" Last Update:  18th Oct 2018
 "------------------------------------------------------------------------
 " Description:
 "       «description»
@@ -50,12 +50,19 @@ endfunction
 
 " # Bench {{{2
 " Function: lh#time#bench(F) {{{3
-if exists('*reltime')
+if exists('*reltimefloat')
   function! lh#time#bench(F, ...) abort
     let t0 = reltime()
     let res = call(a:F, a:000)
     let t = reltime()
     return [res, reltimefloat(reltime(t0, t))]
+  endfunction
+elseif exists('*reltime')
+  function! lh#time#bench(F, ...) abort
+    let t0 = reltime()
+    let res = call(a:F, a:000)
+    let t = reltime()
+    return [res, eval(reltimestr(reltime(t0, t)))]
   endfunction
 else
   function! lh#time#bench(F, ...) abort
@@ -68,7 +75,7 @@ endif
 function! lh#time#bench_n(n, F, ...) abort
   let tot = 0
   for i in range(1, a:n)
-    let [res, b] = call('lh#time#bench', [a:F] + a:000)
+    let [res, b] = call('lh#time#bench', [a:F] + deepcopy(a:000))
     let tot += b
   endfor
   return [res, tot]

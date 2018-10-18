@@ -4,9 +4,9 @@
 "               <URL:http://github.com/LucHermitte/lh-vim-lib>
 " License:      GPLv3 with exceptions
 "               <URL:http://github.com/LucHermitte/lh-vim-lib/License.md>
-" Version:      4.0.0
+" Version:      4.6.4
 " Created:	19th Nov 2008
-" Last Update:  08th Mar 2017
+" Last Update:  18th Oct 2018
 "------------------------------------------------------------------------
 " Description:
 " 	Tests for autoload/lh/list.vim
@@ -39,6 +39,15 @@ endfunction
 function! s:Test_Find_If_functor_predicate()
     :let l = [ 1, 5, 48, 25, 5, 28, 6]
     :let i = lh#list#find_if(l, 'v:1_>12  && v:1_<42 && v:1_%2==0')
+    " echo i . '/' . len(l)
+    AssertEquals (i ,  5)
+    AssertEquals (l[i] ,  28)
+    " :echo l[i]
+endfunction
+
+function! s:Test_Find_If_fast_functor_predicate()
+    :let l = [ 1, 5, 48, 25, 5, 28, 6]
+    :let i = lh#list#find_if_fast(l, 'v:val>12  && v:val<42 && v:val%2==0')
     " echo i . '/' . len(l)
     AssertEquals (i ,  5)
     AssertEquals (l[i] ,  28)
@@ -125,7 +134,7 @@ endfunction
 
 "------------------------------------------------------------------------
 " Searchs {{{2
-function! s:TestBinarySearches()
+function! s:TestBinarySearches() " {{{3
   let v1 = [ -3, -2, -1, -1, 0, 0, 1, 2, 3, 4, 6 ]
   let i = lh#list#lower_bound(v1, 3)
   AssertEquals (v1[i] ,  3)
@@ -151,6 +160,20 @@ function! s:TestBinarySearches()
   AssertEquals (len(v1) ,  lh#list#lower_bound(v1, 10))
   AssertEquals (len(v1) ,  lh#list#upper_bound(v1, 10))
   AssertEquals ([len(v1), len(v1)] ,  lh#list#equal_range(v1, 10))
+endfunction
+
+" Function: s:Test_arg_min_max() {{{3
+function! s:Test_arg_min_max() abort
+  let v1 = [ -3, -2, -1, -1, 0, 0, 1, 2, 3, 4, 6 ]
+  AssertEquals(lh#list#arg_min(v1), 0)
+  AssertEquals(lh#list#arg_max(v1), 10)
+
+  let v2 = [ 0, 0, 1, 20000, -200, 3, 4, 6, -20, -1000, -1, 0, 0, 1, 2, 3, 4, 6 ]
+  AssertEquals(lh#list#arg_min(v2), 9)
+  AssertEquals(lh#list#arg_max(v2), 3)
+
+  AssertEquals(lh#list#arg_min(v2, function('strlen')), 0)
+  AssertEquals(lh#list#arg_max(v2, function('strlen')), 3)
 endfunction
 
 " Function: s:Test_match() {{{3
@@ -568,6 +591,15 @@ endfunction
 " Function: s:Test_separate() {{{3
 function! s:Test_separate() abort
   let l = [ 1, 5, 48, 25, 5, 28, 6]
+
+  let [min, max] = lh#list#separate(l, 'v:val < 10')
+  AssertEquals(min, [1, 5, 5, 6])
+  AssertEquals(max, [48, 25, 28])
+
+  let [min, max] = lh#list#separate(l, 'v:key % 2')
+  AssertEquals(min, [5, 25, 28])
+  AssertEquals(max, [1, 48, 5, 6])
+
   if has('lambda')
     let [min, max] = lh#list#separate(l, {idx, val -> val <10})
     AssertEquals(min, [1, 5, 5, 6])
@@ -591,6 +623,70 @@ function! s:Test_dict_let() abort
   AssertEquals(d.a.b.z, 42)
   call lh#dict#let(d, 'a.z1.z2.z3', 42)
   AssertEquals(d.a.z1.z2.z3, 42)
+endfunction
+
+" lh#dict#need_ref_on() {{{2
+" Function: s:Test_dict_need_ref_on() {{{3
+function! s:Test_dict_need_ref_on() abort
+  try
+    let D  = { 'a': { 'b': 1}, 'c': 2}
+    let g:D = D
+    AssertEquals(D.a.b, 1)
+    AssertEquals(D.c, 2)
+
+    " --- Access something already there, 1 level deep
+    let a = lh#dict#need_ref_on(D, 'a')
+    AssertIs(a, D.a)
+
+    let a = lh#dict#need_ref_on(D, ['a']) " other syntax
+    AssertIs(a, D.a)
+
+    " --- Access something already there, n level deep
+    AssertThrows(lh#dict#need_ref_on(g:D, 'a.b.c.d.e', 42))
+    call lh#dict#let(D, 'a.b.c.d.e', 42)
+    let d = lh#dict#need_ref_on(D, 'a.b.c.d')
+    AssertIs(a, D.a)
+    AssertIs(d, D.a.b.c.d)
+
+    let c = lh#dict#need_ref_on(D, ['a', 'b', 'c']) " other syntax
+    AssertIs(a, D.a)
+    AssertIs(c, D.a.b.c)
+    AssertIs(d, D.a.b.c.d)
+
+    " --- Add something new, 1 lcl deep
+    let ee = lh#dict#need_ref_on(D, 'a.ee')
+    AssertIs(a, D.a)
+    AssertIs(c, D.a.b.c)
+    AssertIs(d, D.a.b.c.d)
+    Assert! has_key(D.a, 'ee')
+    AssertIs(D.a.ee, ee)
+    AssertEquals!(type(ee), type({}))
+    AssertEquals(ee, {})
+
+    " --- Add something new, n lcl deep, other syntax
+    let ff = lh#dict#need_ref_on(D, 'a.b.c.d.1.2.3.ff', [1, 2])
+    AssertIs(a, D.a)
+    AssertIs(c, D.a.b.c)
+    AssertIs(d, D.a.b.c.d)
+    Assert! has_key(D.a, 'ee')
+    AssertIs(D.a.ee, ee)
+    AssertEquals!(type(ee), type({}))
+    AssertEquals(ee, {})
+    Assert! has_key(D.a.b.c.d, '1')
+    Assert! has_key(D.a.b.c.d.1, '2')
+    Assert! has_key(D.a.b.c.d.1.2, '3')
+    Assert! has_key(D.a.b.c.d.1.2.3, 'ff')
+    AssertIs(D.a.b.c.d.1.2.3.ff, ff)
+    AssertEquals!(type(ff), type([]))
+    AssertEquals(ff, [1, 2])
+
+    " --- Try to add something that requires a type modification of a
+    "  subdict
+    let g:D = D
+    AssertThrows(lh#dict#need_ref_on(g:D, 'a.b.c.d.e.1.2.3.ff', [1, 2]))
+  finally
+    call lh#let#unlet('g:D')
+  endtry
 endfunction
 
 " lh#list#cross() {{{2

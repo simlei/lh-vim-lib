@@ -7,7 +7,7 @@
 " Version:      4.0.0
 let s:k_version = 4000
 " Created:      24th Jul 2004
-" Last Update:  04th Jan 2017
+" Last Update:  08th Dec 2017
 "------------------------------------------------------------------------
 " Description:
 "       Defines the global function lh#option#get().
@@ -139,23 +139,15 @@ function! lh#option#get(names,...) abort
         let r = lh#project#_get(name)
         if lh#option#is_set(r)
           call s:Verbose('p:%1 found -> %2', name, r)
-          if lh#ref#is_bound(r)
-            return r.resolve()
-          else
-            return r
-          endif
+          return lh#ref#is_bound(r) ? r.resolve() : r
         endif
       elseif exists(scope.':'.name)
         " \ && (0 != strlen({scope}:{name}))
-        " This syntax doesn't work with dictionaries -> !exe
+        " "return" syntax doesn't work with dictionaries -> "!exe"
         " return {scope}:{name}
         exe 'let value='.scope.':'.name
         call s:Verbose('%1:%2 found -> %3', scope, name, value)
-        if lh#ref#is_bound(value)
-          return value.resolve()
-        else
-          return value
-        endif
+        return lh#ref#is_bound(value) ? value.resolve() : value
       endif
     endfor
   endfor
@@ -275,6 +267,28 @@ function! lh#option#exists_in_buf(bufid, varname) abort
   return has_key(bufvars, a:varname)
 endfunction
 
+" Function: lh#option#is_set_locally(option_name, [bufid='%']) {{{3
+" @return whether a vim option is already set locally, which requires to use
+" `let &l:`  or `setlocal`
+let s:k_option_fullname = {
+      \ 'isk': 'iskeyword'
+      \ }
+function! lh#option#is_set_locally(option_name, ...) abort
+  let bufid = get(a:, 1, '%')
+  if a:option_name =~ '^&\(\([lg]:\)\@!.\)*$'
+    " options with no explicit scope
+    let options = getbufvar(bufid, '&')
+    " Before 7.4.434, getbufvar() returns an empty string instead of an
+    " empty dict when nothing is found
+    " Also, older version of vim don't return local options with
+    " getbufvar(bid, '&')
+    if !empty(options) && has_key(options, get(s:k_option_fullname, a:option_name[1:], a:option_name[1:]))
+      return 1
+    endif
+  endif
+  return 0
+endfunction
+
 " Function: lh#option#getbufvar(expr, name [, default])            {{{3
 " This is an encapsulation of
 "   getbufvar(expr, name, g:lh#option#unset)
@@ -287,19 +301,28 @@ if s:has_default_in_getbufvar
   endfunction
 else
   function! lh#option#getbufvar(buf, name,...)
+    call s:Verbose('getbufvar(%1, %2)', a:buf, a:name)
+    if bufnr(a:buf) == -1
+      let res = a:0 == 0 ? lh#option#unset('unknow option ['.a:buf.']:'.a:name) : a:1
+      return res
+    endif
     let res = getbufvar(a:buf, a:name)
     if (type(res) == type('')) && empty(res)
       " Check whether this is really empty, or whether the variable doesn't
       " exist
       try
         let b = bufnr('%')
-        exe 'buf '.a:buf
+        exe 'buf '.bufnr(a:buf)
         if !exists('b:'.a:name)
           unlet res
           let res = a:0 == 0 ? lh#option#unset('unknow option ['.a:buf.']:'.a:name) : a:1
         endif
       finally
+        if bufexists(b)
+          " the buffer may be under destruction, and thus, it may not exist
+          " anymore
         exe 'buf '.b
+        endif
       endtry
     endif
     return res
@@ -320,7 +343,7 @@ endif
 " Function: lh#option#add(name, values)                       {{{3
 " Add fields to a vim option.
 " @param values list of values to add
-" @example let lh#option#add('l:tags', ['.tags'])
+" @example call lh#option#add('l:tags', ['.tags'])
 function! lh#option#add(name,values)
   let values = type(a:values) == type([])
         \ ? copy(a:values)

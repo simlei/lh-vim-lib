@@ -4,10 +4,10 @@
 "               <URL:http://github.com/LucHermitte/lh-vim-lib/>
 " License:      GPLv3 with exceptions
 "               <URL:http://github.com/LucHermitte/lh-vim-lib/License.md>
-" Version:      4.00.0.
-let s:k_version = 4000
+" Version:      4.01.0.
+let s:k_version = 4010
 " Created:      15th Jan 2015
-" Last Update:  20th Feb 2017
+" Last Update:  08th Mar 2018
 "------------------------------------------------------------------------
 " Description:
 "
@@ -98,10 +98,15 @@ function! s:restore(varname, ...) dict abort " {{{4
     let clean = call('lh#function#bind', args)
     let self.actions += [clean]
   else
+    let varname = a:varname
+
     " unlet is always required in case the type changes
-    let self.actions += ['call lh#on#_unlet('.string(a:varname).')']
-    if a:varname =~ '[~@]' || exists(a:varname)
-      let action = 'let '.a:varname.'='.string(eval(a:varname))
+    let self.actions += ['call lh#on#_unlet('.string(varname).')']
+    if lh#option#is_set_locally(varname)
+      let varname = '&l:'.varname[1:]
+    endif
+    if varname =~ '[~@]' || exists(varname)
+      let action = 'let '.varname.'='.string(eval(varname))
       let self.actions += [action]
     endif
   endif
@@ -168,6 +173,18 @@ function! s:restore_mapping_and_clear_now(key, mode) dict abort " {{{4
   return self
 endfunction
 
+function! s:restore_highlight(hlname) dict abort " {{{4
+  let def = lh#askvim#execute('hi '.a:hlname)[0]
+  let action = substitute(def, '^'.a:hlname.'\s\+\zsxxx\s\+', '', '')
+  let self.actions += [ 'silent! hi '.action]
+  return self
+endfunction
+
+function! s:restore_cursor() dict abort " {{{4
+  let crt_pos = lh#position#getcur()
+  call self.register('call setpos(".", '.string(crt_pos).')')
+  return self
+endfunction
 
 " Function: lh#on#exit() {{{3
 function! lh#on#exit()
@@ -179,6 +196,8 @@ function! lh#on#exit()
   let res.register                       = function(s:getSNR('register'))
   let res.restore_buffer_mapping         = function(s:getSNR('restore_buffer_mapping'))
   let res.restore_mapping_and_clear_now  = function(s:getSNR('restore_mapping_and_clear_now'))
+  let res.restore_highlight              = function(s:getSNR('restore_highlight'))
+  let res.restore_cursor                 = function(s:getSNR('restore_cursor'))
 
   return res
 endfunction
@@ -193,13 +212,21 @@ function! s:finalize() dict " {{{4
     try
       if type(l:Action) == type(function('has'))
         call l:Action()
-      elseif type(l:Action) == type({}) && has_key(l:Action, 'execute')
-        call l:Action.execute([])
+      elseif type(l:Action) == type({})
+        if has_key(l:Action, 'object')
+          " Trick to work without Partials in old vim versions
+          call lh#assert#value(l:Action).has_key('method')
+          call call(l:Action.method, [], l:Action.object)
+        elseif has_key(l:Action, 'execute')
+          call l:Action.execute([])
+        else
+          call lh#assert#unexpected(lh#fmt#printf("Doesn't know how to evaluate this dictionary: %1", l:Action"))
+        endif
       elseif !empty(l:Action)
         exe l:Action
       endif
     catch /.*/
-      call lh#log#this('Error occured when running action (%1)', l:Action)
+      call lh#log#this('Error occured when running action (%1): %2', l:Action, v:exception)
       call lh#log#exception()
     finally
       unlet l:Action

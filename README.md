@@ -1,21 +1,32 @@
-﻿# lh-vim-lib v4.0.0 [![Build Status](https://secure.travis-ci.org/LucHermitte/lh-vim-lib.png?branch=master)](http://travis-ci.org/LucHermitte/lh-vim-lib) [![Project Stats](https://www.openhub.net/p/21020/widgets/project_thin_badge.gif)](https://www.openhub.net/p/21020)
+﻿# lh-vim-lib [![Last release](https://img.shields.io/github/tag/LucHermitte/lh-vim-lib.svg)](https://github.com/LucHermitte/lh-vim-lib/releases) [![Build Status](https://secure.travis-ci.org/LucHermitte/lh-vim-lib.png?branch=master)](http://travis-ci.org/LucHermitte/lh-vim-lib) [![Project Stats](https://www.openhub.net/p/21020/widgets/project_thin_badge.gif)](https://www.openhub.net/p/21020)
 
 ## Introduction
 
 _lh-vim-lib_ is a library that defines some common vim functions I use in my various plugins and ftplugins.
 
-This library has been conceived as a suite of [|autoload|](http://vimhelp.appspot.com/eval.txt.html#autoload) plugins. As such, it requires Vim 7+.
+This library has been conceived as a suite of [|autoload|](http://vimhelp.appspot.com/eval.txt.html#autoload) plugins. As such, it requires Vim 7+. A few commands are defined.
+
+As I only have access to a version 7.4-052 on travis-ci, let's say this is the minimum vim version I'll try to be compatible with. Until 2017 (v3.x) I was trying to be compatible with 7.3-429.
 
 The [complete documentation](http://github.com/LucHermitte/lh-vim-lib/blob/master/doc/lh-vim-lib.txt) can be browsed.
 
 **Important:**
 
 - Since Version 2.2.0, the naming policy of these autoload functions have been harmonized. Now, most names are in lower cases, with words separated by underscores.
-- Since version 3.2.7, it's no longer hosted on google-code but on github
-- Version 4.0.0 breaks `lh#let#if_undef()` interface.
+- Since version 3.2.7, it's no longer hosted on google-code but on github.
+- Version 4.0.0 breaks `lh#let#if_undef()` interface, deprecates `CONFIRM()`, requires vim 7.4-52.
+
+## Table of Content
+
+  * [Functions](#functions)
+  * [Installation](#installation)
+  * [Credits](#credits)
+  * [Some other Vim Scripting libraries](#some-other-vim-scripting-libraries)
 
 ## Functions
 
+  * [Option management](doc/Options.md) -- other web page
+  * [Object Oriented Programming in vim scripts](doc/OO.md) -- other web page
   * [Miscellaneous functions](#miscellaneous-functions)
   * [System related functions](#system-related-functions)
   * [Lists and dictionaries related functions](#lists-and-dictionaries-related-functions)
@@ -24,12 +35,16 @@ The [complete documentation](http://github.com/LucHermitte/lh-vim-lib/blob/maste
   * [Paths related functions](#paths-related-functions)
   * [Commands related functions](#commands-related-functions)
   * [Menus related functions](#menus-related-functions)
-  * [Buffers related functions](#buffers-related-functions)
+  * [Buffers and Windows related functions](#buffers-and-windows-related-functions)
+  * [Quickfix related functions](#quickfix-related-functions)
   * [Syntax related functions](#syntax-related-functions)
   * [UI functions](#ui-functions)
+  * [Project feature](doc/Project.md) -- other web page
   * [Logging framework](doc/Log.md) -- other web page
   * [Design by Contract functions](doc/DbC.md) -- other web page
-  * [Project feature](doc/Project.md) -- other web page
+  * [Call stack decoding](doc/Callstack.md) -- other web page
+  * [Commands](#commands)
+  * [Python related functions](#python-related-functions)
 
 ### Miscellaneous functions
 
@@ -48,15 +63,13 @@ The [complete documentation](http://github.com/LucHermitte/lh-vim-lib/blob/maste
 | `lh#encoding#at(mb_string, i)`                 | Returns the i-th character in a multibytes string                                                                                                                        |
 | `lh#encoding#previous_character()`             | Returns the character before the cursor -- works with multi-byte characters                                                                                              |
 | `lh#encoding#current_character()`              | Returns the character under the cursor -- works with multi-byte characters                                                                                               |
-| `lh#encoding#iconv()`                          | Unlike `iconv()`, this wrapper returns {expr} when we know no conversion can be achieved.                                                                                |
+| `lh#encoding#does_support()`                   | Tries to detect automatically whether a codepoint has an associated glyph in the current font used                                                                       |
+| `lh#encoding#find_best_glyph()`                | Returns the first codepoint of each list that has a glyph in the current font used                                                                                       |
+| `lh#encoding#iconv()`                          | Unlike `iconv()`, this wrapper returns {expr} when we know no conversion can be achieved                                                                                 |
 | `lh#encoding#iconv(expr, from, to)`            | Converts an expression from an encoding to another                                                                                                                       |
 | `lh#encoding#strlen(mb_string)`                | Executes `strlen()` on a multibytes string                                                                                                                               |
 | `lh#encoding#strpart(mb_string, p, l)`         | Executes `strpart()` on a multibytes string                                                                                                                              |
 | `lh#event#register_for_one_execution_at()`     | Registers a command to be executed once (and only once) when an event is triggered on the current file                                                                   |
-| `lh#exception#callstack()`                     | Parses `v:throwpoint` to extract the functions called                                                                                                                    |
-| `lh#exception#callstack()as_qf`                | Returns the callstack in a format compatible with quickfix functions                                                                                                     |
-| `lh#exception#decode()`                        | Create an object containing a callstack from a throwpoint                                                                                                                |
-| `lh#exception#get_callstack()`                 | Obtain the callstack at the current callsite                                                                                                                             |
 | `lh#file#new_cache().get()`                    | Caches and returns data associated to a file                                                                                                                             |
 | `lh#float#arg_max(list)`                       | Returns the index of the maximum element of a list of floats                                                                                                             |
 | `lh#float#arg_min(list)`                       | Returns the index of the minimum element of a list of floats                                                                                                             |
@@ -66,37 +79,30 @@ The [complete documentation](http://github.com/LucHermitte/lh-vim-lib/blob/maste
 | `lh#ft#is_text()`                              | Tells whether the filetype is a text filetype                                                                                                                            |
 | `lh#has#jobs()`                                | Tells whether +job are correctly implemented                                                                                                                             |
 | `lh#has#partials()`                            | Tells whether partials are correctly implemented                                                                                                                         |
+| `lh#has#patch()`                               | Portable layer over `|has-patch|` feature                                                                                                                                |
 | `lh#has#default_in_getbufvar()`                | Tells whether `getbufvar()` has its 3 parameters                                                                                                                         |
 | `lh#icomplete#new(startcol, matches, Hook)`    | Prepares a smart insert mode omni-completion menu that'll trigger actions instead of inserting text. _smart_ means characters may be typed to reduce choices.            |
 | `lh#icomplete#new_on(pat, matches, Hook)`      | Same as previous, but this time the startcol is automatically deduced from the word pattern.                                                                             |
 | `lh#icomplete#run(startcol, matches, Hook)`    | Prepares an insert mode completion menu that'll trigger actions instead of inserting text as `complete()` does. **deprecated** prefer `lh#icomplete#new()`               |
+| `lh#lang#set_message_temporarily()`            | Changes `$LANG` to the value passed, and returns a `lh#on#exit()` object to restore the variable value                                                                 |
 | `lh#leader#get()`                              | Returns the current value of `g:mapleader`, or `'\\'` if unset                                                                                                           |
 | `lh#leader#get_local()`                        | Returns the current value of `g:maplocalleader`, or `'\\'` if unset                                                                                                      |
 | `lh#leader#set_local_if_unset()`               | Sets a new value to `g:maplocalleader`, if and only if this variable wasn't already set                                                                                  |
 | `lh#let#if_undef()`                            | Defines an extended vim variable (with ` :let`) on the condition the variable does not exist yet                                                                         |
 | `lh#let#to()`                                  | Defines an extended vim variable (with ` :let`) -- its previous value will be overridden                                                                                 |
 | `lh#let#unlet()`                               | Undefines an extended vim variable (with ` :unlet`)                                                                                                                      |
+| `lh#mark#is_unused(markname)`                  | Tells whether a mark is already used                                                                                                                                     |
+| `lh#mark#find_first_unused()`                  | Returns the name of the first unused mark found in A..Z and a..z                                                                                                         |
 | `lh#math#abs()`                                | Portable `abs()` function                                                                                                                                                |
 | `lh#mapping#define()`                          | Defines a mapping from its description                                                                                                                                   |
 | `lh#mapping#plug()`                            | Defines a series of default mappings associated to a plug mapping                                                                                                        |
+| `lh#mapping#reinterpret_escaped_char()`        | Transforms sequences into interpreted sequences for mappings                                                                                                             |
+| `lh#mapping#who_map(rhs, mode)`                | Returns a list of mappings that are bound to {rhs} in the specified {mode}                                                                                               |
+| `lh#notify#once()`                             | Notifies something once                                                                                                                                                  |
+| `lh#notify#deprecated()`                       | Notifies somthing is deprecated once                                                                                                                                     |
+| `lh#notify#clear_notifications()`              | Clear previous notification so that could be notified again                                                                                                              |
 | `lh#on#exit()`                                 | Prepares a finalizer object to be executed in a `:finally` clause in order to restore variables and execute functions                                                    |
-| `lh#object#inject()`                           | Injects a new method in an existing object. Meant to simplify maintenance task.                                                                                          |
-| `lh#object#inject_methods()`                   | Injects several methods in an existing object.                                                                                                                           |
-| `lh#object#is_an_object()`                     | Tells whether the parameter is an object built with `lh#object#make_top_type()`                                                                                          |
-| `lh#object#make_top_type()`                    | Creates a new object                                                                                                                                                     |
-| `lh#object#to_string()`                        | Stringifies a data -- hide objects methods                                                                                                                               |
-| `lh#option#add()`                              | Adds new values to a vim option -- and avoid the values being listed more than once                                                                                      |
-| `lh#option#get(name [,default [, scope]])`     | Fetches the value of a user defined option, that may be _empty_. `default` is returned if the option does not exists. Default value for `default` is `g:lh#option#unset` |
-| `lh#ft#option#get(name, ft [...])`             | Fetches the value of a user defined option that can be specialized on a filetype basis                                                                                   |
-| `lh#ft#option#get_postfixed(name, ft [...])`   | Fetches the value of a user defined option that can be specialized on a filetype basis                                                                                   |
-| `lh#ft#option#get_all(name [, ft...])`         | Fetches the merged values of a dictionnary that can be specialized on a filetype basis                                                                                   |
-| `lh#option#get_non_empty()`                    | Fetches the value of a user defined option, that is not _empty_                                                                                                          |
-| `lh#option#get_from_buf(bufid, name [...])`    | Same as `lh#option#get()` except that it works from bufid context                                                                                                        |
-| `lh#option#getbufvar(buf, varname [,def])`     | Encapsulates `getbufvar(buf, varname, g:lh#option#unset)` when `def` is not passed                                                                                       |
-| `lh#option#getbufglobvar(buf, varname [,def])` | Encapsulates `getbufvar(buf, varname, get(g:, varname, g:lh#option#unset))`                                                                                              |
-| `lh#option#is_set(expr)`                       | Tells whether the expression is set (i.e. different from `g:lh#option#unset`)                                                                                            |
-| `lh#option#is_unset(expr)`                     | Tells whether the expression is not set (i.e. identical to `g:lh#option#unset`)                                                                                          |
-| `lh#ref#bind(varname)`                         | Returns a refererence to another variable. To be evaluated with `lh#option#get()`                                                                                        |
+| `lh#ref#bind(varname)`                         | Returns a reference to another variable. To be evaluated with [`lh#option#get()`](doc/Options.md#lhoptiongetname-default--scope)                                         |
 | `lh#ref#is_bound(var)`                         | Tells whether a variable is bound to another                                                                                                                             |
 | `lh#po#context().translate(msgId)`             | Translates message Id from Portable Object files                                                                                                                         |
 | `lh#position#char_at_mark()`                   | Obtains the character under a mark                                                                                                                                       |
@@ -104,9 +110,16 @@ The [complete documentation](http://github.com/LucHermitte/lh-vim-lib/blob/maste
 | `lh#position#char_at()`                        | Obtains the character at a given pair of coordinates                                                                                                                     |
 | `lh#position#compare()`                        | Tells if a position in a buffer is before another one -- result compatible with `sort()`                                                                                                                   |
 | `lh#position#extract(pos1,pos2)`               | Obtains the text between two positions                                                                                                                                   |
+| `lh#position#getcur()`                         | Return [`getcurpos()`](http://vimhelp.appspot.com/eval.txt.html#getcurpos%28%29) when it exists, [`getpos('.')`](http://vimhelp.appspot.com/eval.txt.html#getpos%28%29)  otherwise |
 | `lh#position#is_before()`                      | Tells if a position in a buffer is before another one -- boolean result                                                                                                  |
+| `lh#position#move(dir)`                        | Returns a the string to use to move the cursor in the given direction -- this can be redoable w/ vim > 7.4.849                                                           |
+| `lh#position#move_n(dir, count)`               | Returns a the string to use to move the cursor count times in the given direction -- this can be redoable w/ vim > 7.4.849                                               |
+| `lh#string#count_char()`                       | Counts how many times a character is present in a string                                                                                                                 |
 | `lh#string#matches()`                          | Extracts a list of all matches in a string                                                                                                                               |
-| `lh#string#trim()`                             | Trim a string                                                                                                                                                            |
+| `lh#string#matchstrpos()`                      | Backports `matchstrpos()` to old vim versions                                                                                                                            |
+| `lh#string#trim()`                             | Trims a string                                                                                                                                                           |
+| `lh#tags#stack#jump()`                         | Forges a new tag entry in the tag stack, and jump to it                                                                                                                  |
+| `lh#tags#stack#push()`                         | Forges a new tag entry in the tag stack                                                                                                                                  |
 | `lh#time#bench(F,...)`                         | Times the execution of `F(...)`                                                                                                                                          |
 | `lh#time#bench_n(n, F,...)`                    | Times n executions of `F(...)`                                                                                                                                           |
 | `lh#time#date()`                               | return the equivalent of `strftime('%D-th %b %Y)`                                                                                                                        |
@@ -144,6 +157,7 @@ See also [system-tools](http://github.com/LucHermitte/vim-system-tools)
 | `lh#dict#get_composed()`         | Function symetric to `lh#let#*()` functions                                                                       |
 | `lh#dict#key()`                  | Expects the dictionary to have only one element (throw otherwise) and returns it                                  |
 | `lh#dict#let()`                  | Emulates `:let dict.key.key.key = value`                                                                          |
+| `lh#dict#need_ref_on()`          | Makes sure `:let dict.key.key.key` exists and returns a reference to that element                                 |
 | `lh#dict#subset()`               | Builds a subset dictionary of a dict                                                                              |
 | `lh#list#accumulate()`           | Accumulates the elements from a list                                                                              |
 | `lh#list#accumulate()`           | Accumulates the elements from a list                                                                              |
@@ -157,6 +171,7 @@ See also [system-tools](http://github.com/LucHermitte/vim-system-tools)
 | `lh#list#equal_range()`          | See C++ [`std::equal_range`](http://en.cppreference.com/w/cpp/algorithm/equal_range)                              |
 | `lh#list#find_entity()`          | Return the index where an entity is within a list, -1 if not found                                                |
 | `lh#list#find_if()`              | Searches the first element in a list that verifies a predicate                                                    |
+| `lh#list#find_if_fast()`         | Searches the first element in a list that verifies a simple predicate only relying on `v:val` or `v:key`          |
 | `lh#list#flat_extend()`          | Extends a list with another, or add elements into a list depending on the _right-hand-side_ parameter             |
 | `lh#list#flatten()`              | Flattens a list                                                                                                   |
 | `lh#list#for_each_call()`        | Calls a function of all elements from a list                                                                      |
@@ -214,36 +229,40 @@ See also [system-tools](http://github.com/LucHermitte/vim-system-tools)
 
 
 ### Paths related functions
-| Function                                     | Purpose                                                                                                   |
-|:---------------------------------------------|:----------------------------------------------------------------------------------------------------------|
-| `lh#path#add_path_if_exists(listname, path)` | Adds a path is a list iff the path points to an existing node                                             |
-| `lh#path#common()`                           | Returns the biggest common part between several paths                                                     |
-| `lh#path#depth()`                            | Returns the depth of a path                                                                               |
-| `lh#path#exists()`                           | Returns whether a pathname can be read, or if it's open in a buffer                                       |
-| `lh#path#find(pathlist, regex)`              | Returns the first path in a list that matches a regex                                                     |
-| `lh#path#find_in_parents()`                  | Support function at the root of [local_vimrc](http://github.com/LucHermitte/local_vimrc)                  |
-| `lh#path#fix()`                              | Fixes a pathname in order for it to be compatible with external commands or vim options                   |
-| `lh#path#glob_as_list()`                     | Returns `globpath()`result as a list                                                                      |
-| `lh#path#is_absolute_path()`                 | Tells whether the parameter is an absolute pathname                                                       |
-| `lh#path#is_distant_or_scratch()`            | Tells whether the parameter is a distant path or a scratch buffer name                                    |
-| `lh#path#is_in(node, path)`                  | Tells whether a node is already present in a path -- `readlink()` is applied on both parameters           |
-| `lh#path#is_url()`                           | Tells whether the parameter is an URL                                                                     |
-| `lh#path#join(pathparts, ...)`               | Joins path parts into a string                                                                            |
-| `lh#path#munge(pathlist, path)`              | Adds a path to a list on the condition the path isn't already present, and that it points to a valid node |
-| `lh#path#new_permission_lists()`             | Prepares a permission lists object to be used to accept/reject pathnames based upon white/black/... lists |
-| `lh#path#readlink(pathname)`                 | Returns `readlink` result on the pathname -- when the command is available on the system                  |
-| `lh#path#relative_to()`                      | Returns the relative offset to reference files in another directory                                       |
-| `lh#path#remove_dir_mark()`                  | Removes the trailing `/` or `\` in the path if any                                                        |
-| `lh#path#select_one()`                       | Asks the end-user to select one pathname                                                                  |
-| `lh#path#shellslash()`                       | Returns the shellslash character                                                                          |
-| `lh#path#simplify()`                         | Like `simplify()`, but also strips the leading `./`                                                       |
-| `lh#path#split(pathname)`                    | Splits a string into path parts                                                                           |
-| `lh#path#strip_common()`                     | In a set of pathnames, strips the leading part they all have in common                                    |
-| `lh#path#strip_start()`                      | Strips the leading part of a pathname if found in the given list of pathnames                             |
-| `lh#path#to_dirname()`                       | Complete the current path with '/' if missing                                                             |
-| `lh#path#to_regex()`                         | Builds a regex that can be used to match pathnames                                                        |
-| `lh#path#to_relative()`                      | Transforms a pathname to a pathname relative to the current directory                                     |
-| `lh#path#vimfiles()`                         | Returns where the current user vimfiles are (`$HOME/.vim` `~/vimfiles`, ...)                              |
+| Function                                     | Purpose                                                                                                                                  |
+|:---------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------|
+| `lh#path#add_path_if_exists(listname, path)` | Adds a path is a list iff the path points to an existing node                                                                            |
+| `lh#path#cd_without_sideeffects()`           | Change the current directory without altering the behaviour regarding window local directories                                           |
+| `lh#path#common()`                           | Returns the biggest common part between several paths                                                                                    |
+| `lh#path#depth()`                            | Returns the depth of a path                                                                                                              |
+| `lh#path#exe()`                              | Returns the fullpath of an executable (emulate [`exepath()`](http://vimhelp.appspot.com/eval.txt.html#exepath%28%29) on old vim versions |
+| `lh#path#exists()`                           | Returns whether a pathname can be read, or if it's open in a buffer                                                                      |
+| `lh#path#find(pathlist, regex)`              | Returns the first path in a list that matches a regex                                                                                    |
+| `lh#path#find_in_parents()`                  | Support function at the root of [local_vimrc](http://github.com/LucHermitte/local_vimrc)                                                 |
+| `lh#path#find_upward()`                      | Uniform interface to `finddir()` and `filefile()`                                                                                        |
+| `lh#path#fix()`                              | Fixes a pathname in order for it to be compatible with external commands or vim options                                                  |
+| `lh#path#glob_as_list()`                     | Returns `globpath()`result as a list                                                                                                     |
+| `lh#path#is_absolute_path()`                 | Tells whether the parameter is an absolute pathname                                                                                      |
+| `lh#path#is_distant_or_scratch()`            | Tells whether the parameter is a distant path or a scratch buffer name                                                                   |
+| `lh#path#is_in(node, path)`                  | Tells whether a node is already present in a path -- `readlink()` is applied on both parameters                                          |
+| `lh#path#is_url()`                           | Tells whether the parameter is an URL                                                                                                    |
+| `lh#path#join(pathparts, ...)`               | Joins path parts into a string                                                                                                           |
+| `lh#path#munge(pathlist, path)`              | Adds a path to a list on the condition the path isn't already present, and that it points to a valid node                                |
+| `lh#path#new_permission_lists()`             | Prepares a permission lists object to be used to accept/reject pathnames based upon white/black/... lists                                |
+| `lh#path#readlink(pathname)`                 | Returns `readlink` result on the pathname -- when the command is available on the system                                                 |
+| `lh#path#relative_to()`                      | Returns the relative offset to reference files in another directory                                                                      |
+| `lh#path#remove_dir_mark()`                  | Removes the trailing `/` or `\` in the path if any                                                                                       |
+| `lh#path#select_one()`                       | Asks the end-user to select one pathname                                                                                                 |
+| `lh#path#shellslash()`                       | Returns the shellslash character                                                                                                         |
+| `lh#path#simplify()`                         | Like `simplify()`, but also strips the leading `./`                                                                                      |
+| `lh#path#split(pathname)`                    | Splits a string into path parts                                                                                                          |
+| `lh#path#strip_common()`                     | In a set of pathnames, strips the leading part they all have in common                                                                   |
+| `lh#path#strip_start()`                      | Strips the leading part of a pathname if found in the given list of pathnames                                                            |
+| `lh#path#to_dirname()`                       | Complete the current path with '/' if missing                                                                                            |
+| `lh#path#to_regex()`                         | Builds a regex that can be used to match pathnames                                                                                       |
+| `lh#path#to_relative()`                      | Transforms a pathname to a pathname relative to the current directory                                                                    |
+| `lh#path#vimfiles()`                         | Returns where the current user vimfiles are (`$HOME/.vim` `~/vimfiles`, ...)                                                             |
+| `lh#path#writable()`                         | Returns whether we could write into the pathname, even if nothing by that name already exists                                            |
 
 
 ### Commands related functions
@@ -276,7 +295,7 @@ See also [system-tools](http://github.com/LucHermitte/vim-system-tools)
 See also the documentation of the old functions at http://hermitte.free.fr/vim/general.php#expl_menu_map
 
 
-### Buffers related functions
+### Buffers and Windows related functions
 | Function                         | Purpose                                                                                                                          |
 |:---------------------------------|:---------------------------------------------------------------------------------------------------------------------------------|
 | `lh#buffer#dialog#add_help()`    | see [lh-vim-lib/dialog](doc/Dialog.md)                                                                                           |
@@ -295,12 +314,22 @@ See also the documentation of the old functions at http://hermitte.free.fr/vim/g
 | `lh#window#gotoid()`             | Emulates recent `win_gotoid()` function                                                                                          |
 
 
+### Quickfix related functions
+| Function                   | Purpose                                                                                                                      |
+|:---------------------------|:-----------------------------------------------------------------------------------------------------------------------------|
+| `lh#qf#get_title()`        | Returns title of the qf window                                                                                               |
+| `lh#qf#get_winnr()`        | Returns window number of the qf window -- ignore location list windows                                                       |
+| `lh#qf#is_displayed()`     | Tells whether the qf window is visible -- ignore location list windows                                                       |
+| `lh#qf#make_context_map()` | Returns a non intrusive alternative to [`quickfix-context`](http://vimhelp.appspot.com/quickfix.txt.html#quickfix%2dcontext) |
+
 ### Syntax related functions
 | Function                                                         | Purpose                                                                                                                                |
 |:-----------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------|
-| `lh#syntax#getline_without()`                                    | Extracts a line without the characters matching a given syntax ID pattern                                                              |
+| `lh#syntax#getline_matching()`                                   | Extracts a line with the characters matching a given syntax ID pattern                                                                 |
+| `lh#syntax#getline_not_matching()`                               | Extracts a line without the characters matching a given syntax ID pattern                                                              |
 | `lh#syntax#is_a_comment()`                                       | Tells the syntax kind of the character at the given mark is a comment                                                                  |
 | `lh#syntax#is_a_comment_at()`                                    | Tells the syntax kind of the character at the given position is a comment                                                              |
+| `lh#syntax#line_filter()`                                        | Defines an object that extracts the characters matching a given syntax ID pattern text lines                                           |
 | `lh#syntax#list()`                                               | Like `lh#syntax#list_raw()`, but reinterprets the results (experimental)                                                               |
 | `lh#syntax#list_raw()`                                           | Returns the result of "`syn list {group-name}`" as a string                                                                            |
 | `lh#syntax#match_at()`                                           | Tells whether the syntax kind of the character at the given position matches a pattern                                                 |
@@ -311,11 +340,13 @@ See also the documentation of the old functions at http://hermitte.free.fr/vim/g
 
 
 ### Functors
-| Function                | Purpose                                      |
-|:------------------------|:---------------------------------------------|
-| `lh#function#bind()`    | Builds a functor object.                     |
-| `lh#function#execute()` | Executes a functor object.                   |
-| `lh#function#prepare()` | Prepares a functor object to be `eval`uated. |
+| Function                  | Purpose                                                     |
+| :------------------------ | :-----------------------------------------------------------|
+| `lh#function#bind()`      | Builds a functor object.                                    |
+| `lh#function#execute()`   | Executes a functor object.                                  |
+| `lh#function#prepare()`   | Prepares a functor object to be `eval`uated.                |
+| `lh#partial#make()`       | Prepares a partial (or an emulated partial) to be executed. |
+| `lh#partial#execute()`    | Executes a partial (or an emulated partial) .               |
 
 
 ### UI functions
@@ -324,15 +355,27 @@ interactive functions. Depending on a configuration variable
 (`(bpg):ui_type`), they will delegate the interaction to a gvim UI
 function, or a plain text UI function (defined by vim, or emulated)
 
-| Function          | Purpose                                                                                                                                                 |
-|:------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `lh#ui#check()`   | Emulates a checbox UI function                                                                                                                          |
-| `lh#ui#combo()`   | Emulates a combobox UI function                                                                                                                         |
-| `lh#ui#confirm()` | Similar to `confirm()`                                                                                                                                  |
-| `lh#ui#if()`      | Acts as the ternary operator                                                                                                                            |
-| `lh#ui#input()`   | Calls `inputdialog()` or `input()`                                                                                                                      |
-| `lh#ui#switch()`  | Emulates `switch()` in vim-script language                                                                                                              |
-| `lh#ui#which()`   | Wrapper around functions like `lh#ui#confirm()` or `lh#ui#combo()` that returns the text of the selected item instead of the index of the selected item |
+Possible values for `(bpg):ui_type` are: `gui` (default) or `text`.
+
+In `lh#ui#confirm()` case, the option `(bpg):ui_confirm_type` can be set to
+`'std'` to explicitly use
+[`confirm()`](http://vimhelp.appspot.com/eval.txt.html#confirm%28%29) instead
+of the old emulated version. The default is to use the emulated version of
+`confirm()`, which unlike the standard one permits to navigate between
+propositions with the cursor or `tab`  keys to choose one.
+
+| Function                         | Purpose                                                                                                                                                 |
+|:---------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `lh#ui#ask()`                    | Ask a question under the status line                                                                                                                    |
+| `lh#ui#check()`                  | Emulates a checbox UI function                                                                                                                          |
+| `lh#ui#combo()`                  | Emulates a combobox UI function                                                                                                                         |
+| `lh#ui#confirm()`                | Similar to `confirm()`                                                                                                                                  |
+| `lh#ui#global_confirm_command()` | Extends `:substitute` `confirm`  flag to `:global`. Wrapped in `:ConfirnGlobal`                                                                         |
+| `lh#ui#if()`                     | Acts as the ternary operator                                                                                                                            |
+| `lh#ui#input()`                  | Calls `inputdialog()` or `input()`                                                                                                                      |
+| `lh#ui#make_confirm_command()`   | Prepare an object to use when executing a command multiple times                                                                                        |
+| `lh#ui#switch()`                 | Emulates `switch()` in vim-script language                                                                                                              |
+| `lh#ui#which()`                  | Wrapper around functions like `lh#ui#confirm()` or `lh#ui#combo()` that returns the text of the selected item instead of the index of the selected item |
 
 In the same thematics, see also [VFT - Vim Form Toolkit](http://www.vim.org/scripts/script.php?script_id=2160)
 
@@ -345,28 +388,59 @@ See separate page: [doc/DbC.md](doc/DbC.md).
 ### Word Tools
 See http://hermitte.free.fr/vim/general.php#expl_words_tools
 
+### Commands
+
+| Command                                   | Purpose                                                                                                                                                                    |
+|:------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [`:Toggle`](#menus-related-functions)     | Toggles the state of a cyclic option/variable                                                                                                                              |
+| `:LoadedBufDo`                            | Like [`:h :bufdo`](http://vimhelp.appspot.com/windows.txt.html#%3abufdo), on loaded buffers                                                                                |
+| `:CleanEmptyBuffers`                      | [Wipeout](http://vimhelp.appspot.com/windows.txt.html#%3abw) empty buffers                                                                                                 |
+| [`:LHLog`](doc/Log.md)                    | Helper command to choose where logs shall be dumped to                                                                                                                     |
+| `Jobs`, `:JobUnpause`, `:StopBGExecution` | Helper commands to keep track of async jobs registered with lh-vim-lib API                                                                                                 |
+| `:ConfirmGlobal`                          | Like the [`:g`](http://vimhelp.appspot.com/repeat.txt.html#%3aglobal) command, but with a _confirm_ option as in [`:s`](http://vimhelp.appspot.com/change.txt.html#%3as_c) |
+| `:LetIfUndef`                             | Sets the value of an option, only if not set already -- supports `g.foo.bar = 42`                                                                                          |
+| `:LetTo`                                  | Sets the value of an option, even if it's already set -- unlike [`:h :let`](http://vimhelp.appspot.com/eval.txt.html#%3alet), supports `g:foo.bar = 42`                    |
+| `:Unlet`                                  | [`:unlet`](http://vimhelp.appspot.com/eval.txt.html#%3aunlet) a variable if it doesn't exists -- no side effect unlike `:silent! unlet`                                    |
+| `:PushOptions`, `:PopOptions`             | Pushs/pops values into list variables                                                                                                                                      |
+| [`:Project`](doc/Project.md)              | Central command for the project feature                                                                                                                                    |
+
+## Python related functions
+
+| Command                           | Purpose                                                                                       |
+| :---------------------------------| :---------------------------------------------------------------------------------------------|
+| `lh#python#best_still_avail()`    | Returns the best python flavour we can use without imposing a version, unlike `has('python')` |
+| `lh#python#has()`                 | Returns `has('python_compiled') || has('python3_compiled')`                                   |
+| `lh#python#can_import()`          | Returns whether `:{bestpy} import {modname}` succeeds                                         |
+| `lh#python#external_can_import()` | Returns whether `system('python -c "import {modname}")` succeeds                              |
 
 ## Installation
   * Requirements: Vim 7.4, Vim 8 for `lh#async` feature.
   * Clone from the git repository
-```
-git clone git@github.com:LucHermitte/lh-vim-lib.git
-```
+
+    ```sh
+    git clone git@github.com:LucHermitte/lh-vim-lib.git
+    ```
+
   * [Vim Addon Manager](http://github.com/MarcWeber/vim-addon-manager): (this
     is the preferred method as VAM handles dependencies).
-```vim
-ActivateAddons lh-vim-lib
-```
+
+    ```vim
+    ActivateAddons lh-vim-lib
+    ```
+
   * Note that [vim-flavor](https://github.com/kana/vim-flavor) also handles
     dependencies which will permit to automatically import lh-vim-lib from
     plugins that use it:
-```
-flavor LucHermitte/lh-vim-lib
-```
+
+    ```
+    flavor 'LucHermitte/lh-vim-lib'
+    ```
+
   * Vundle/NeoBundle:
-```vim
-Bundle 'LucHermitte/lh-vim-lib'
-```
+
+    ```vim
+    Bundle 'LucHermitte/lh-vim-lib'
+    ```
 
 ## Credits
   * Luc Hermitte, maintainer
@@ -375,12 +449,12 @@ Bundle 'LucHermitte/lh-vim-lib'
 
 ## Some other Vim Scripting libraries
 
-### The ones that seem to be still activelly maintainded
+### The ones that seem to be still activelly maintained
   * [ingo-library](http://www.vim.org/scripts/script.php?script_id=4433), by
     Ingo Karkat
   * [maktaba](https://github.com/google/vim-maktaba), by google
   * [tlib](http://www.vim.org/scripts/script.php?script_id=1863), by Tom Link
-  * [vim-misc](https://github.com/xolox/vim-misc), by Peter Odding 
+  * [vim-misc](https://github.com/xolox/vim-misc), by Peter Odding
   * [vital](https://github.com/vim-jp/vital.vim), by the Japanese Vim User
     Group
 

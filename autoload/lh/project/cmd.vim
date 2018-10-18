@@ -2,10 +2,10 @@
 " File:         autoload/lh/project/cmd.vim                       {{{1
 " Author:       Luc Hermitte <EMAIL:luc {dot} hermitte {at} gmail {dot} com>
 "		<URL:http://github.com/LucHermitte/lh-vim-lib>
-" Version:      4.0.0.
-let s:k_version = '400'
+" Version:      4.6.0.
+let s:k_version = '460'
 " Created:      07th Mar 2017
-" Last Update:  08th Mar 2017
+" Last Update:  28th Aug 2018
 "------------------------------------------------------------------------
 " Description:
 "       Define support functions for :Project
@@ -115,10 +115,13 @@ function! s:echo_project(prj, var) abort " {{{2
 endfunction
 
 function! s:let_project(prj, var, lVal) abort " {{{2
+  " TODO: support &tw += 42, and &tags+='path' => not the same let-operator
+  call s:Verbose('let {%1}.%2 <- %3', a:prj.name, a:var, a:lVal)
   let value0 = join(a:lVal, ' ')
   let [all, compound, equal, value ; rem] = matchlist(value0, '\v^\s=%(([+-/*.])\=|(\=))\s*(.*)$')
   if !empty(compound)
     let old = a:prj.get(a:var)
+    " debug call s:Verbose('type: old:%1, value:%2, eval value:%3', type(old), type(value), type(eval(value)))
     if compound == '*'
       exe 'let old = old * '.value
     elseif compound == '/'
@@ -434,20 +437,25 @@ function! s:list_var_for_complete(prj, ArgLead) " {{{3
   else
     let [all, sDict0, key ; trail] = matchlist(a:ArgLead, '\v(.*)(\..*)')
     let sDict = 'prj.variables.'.sDict0
-    let dict = eval(sDict)
-    let vars = keys(dict)
-    call filter(vars, 'type(dict[v:val]) != type(function("has"))')
-    call map(vars, 'v:val. (type(dict[v:val])==type({})?".":"")')
-    call map(vars, 'sDict0.".".v:val')
-    let l = len(a:ArgLead) - 1
-    call filter(vars, 'v:val[:l] == a:ArgLead')
+    if exists(sDict)
+      let dict = eval(sDict)
+      let vars = keys(dict)
+      call filter(vars, 'type(dict[v:val]) != type(function("has"))')
+      call map(vars, 'v:val. (type(dict[v:val])==type({})?".":"")')
+      call map(vars, 'sDict0.".".v:val')
+      let l = len(a:ArgLead) - 1
+      call filter(vars, 'v:val[:l] == a:ArgLead')
+    else
+      let vars = []
+    endif
   endif
   if empty(a:ArgLead)
     let vars += s:list_var_for_complete(a:prj, '$')
     let vars += s:list_var_for_complete(a:prj, '&')
   endif
+  " Check into inherited projects
+  call map(copy(prj.parents), 'extend(vars, s:list_var_for_complete(v:val, a:ArgLead))')
   let res = vars
-  " TODO: support var.sub.sub and inherited projects
   return vars
 endfunction
 

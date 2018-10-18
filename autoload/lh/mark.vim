@@ -1,14 +1,14 @@
 "=============================================================================
-" File:         autoload/lh/type.vim                              {{{1
+" File:         autoload/lh/mark.vim                              {{{1
 " Author:       Luc Hermitte <EMAIL:luc {dot} hermitte {at} gmail {dot} com>
 "		<URL:http://github.com/LucHermitte/lh-vim-lib>
-" Version:      4.0.0.0.
-let s:k_version = '4000'
-" Created:      20th Feb 2017
-" Last Update:  10th Apr 2017
+" Version:      4.0.0.
+let s:k_version = '400'
+" Created:      24th Jul 2017
+" Last Update:  24th Jul 2017
 "------------------------------------------------------------------------
 " Description:
-"       Helper functions around |type()|
+"       Functions related to marks
 "
 "------------------------------------------------------------------------
 " History:      «history»
@@ -21,13 +21,13 @@ set cpo&vim
 "------------------------------------------------------------------------
 " ## Misc Functions     {{{1
 " # Version {{{2
-function! lh#type#version()
+function! lh#mark#version()
   return s:k_version
 endfunction
 
 " # Debug   {{{2
 let s:verbose = get(s:, 'verbose', 0)
-function! lh#type#verbose(...)
+function! lh#mark#verbose(...)
   if a:0 > 0 | let s:verbose = a:1 | endif
   return s:verbose
 endfunction
@@ -42,59 +42,31 @@ function! s:Verbose(expr, ...)
   endif
 endfunction
 
-function! lh#type#debug(expr) abort
+function! lh#mark#debug(expr) abort
   return eval(a:expr)
 endfunction
 
 
 "------------------------------------------------------------------------
 " ## Exported functions {{{1
-" Function: lh#type#name(type) {{{2
-let s:names =
-      \{ type(0)              : 'number'
-      \, type('')             : 'string'
-      \, type(function('has')): 'funcref'
-      \, type([])             : 'list'
-      \, type({})             : 'dictionary'
-      \, type(0.0)            : 'float'
-      \, 8                    : 'job'
-      \, 9                    : 'channel'
-      \ }
-if exists('v:true')
-  let s:names[v:true] = 'bool'
-  let s:names[v:false] = 'bool'
-endif
-if exists('v:none')
-  let s:names[v:none] = 'None'
-endif
-function! lh#type#name(type) abort
-  return get(s:names, a:type, 'unknown')
+
+" Function: lh#mark#is_unused(mark) {{{3
+function! lh#mark#is_unused(mark) abort
+  return getpos(a:mark)[1:] == [0,0,0]
 endfunction
 
-" Function: lh#type#is_dict(value) {{{2
-function! lh#type#is_dict(value) abort
-  return type(a:value) == type({})
+" Function: lh#mark#find_first_unused() {{{3
+let s:a_ascii_code = char2nr('a')
+let s:A_ascii_code = char2nr('A')
+let s:quote        = "'"
+let s:k_mark_names
+      \ = map(range(26), 's:quote . nr2char(v:val+s:A_ascii_code)')
+      \ + map(range(26), 's:quote . nr2char(v:val+s:a_ascii_code)')
+function! lh#mark#find_first_unused() abort
+  let idx = lh#list#find_if_fast(s:k_mark_names, 'lh#mark#is_unused(v:val)')
+  return get(s:k_mark_names, idx, -1)
 endfunction
 
-" Function: lh#type#is_list(value) {{{2
-function! lh#type#is_list(value) abort
-  return type(a:value) == type([])
-endfunction
-
-" Function: lh#type#is_funcref(value) {{{2
-function! lh#type#is_funcref(value) abort
-  return type(a:value) == type(function('has'))
-endfunction
-
-" Function: lh#type#is_string(value) {{{2
-function! lh#type#is_string(value) abort
-  return type(a:value) == type('')
-endfunction
-
-" Function: lh#type#is_number(value) {{{2
-function! lh#type#is_number(value) abort
-  return type(a:value) == type(0)
-endfunction
 
 "------------------------------------------------------------------------
 " ## Internal functions {{{1

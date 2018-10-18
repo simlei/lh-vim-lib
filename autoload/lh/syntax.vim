@@ -7,13 +7,39 @@
 " Version:	4.0.0
 let s:k_version = 400
 " Created:	05th Sep 2007
-" Last Update:	01st Mar 2017
+" Last Update:	17th Oct 2018
 "------------------------------------------------------------------------
 " Description:	«description»
 "
 "------------------------------------------------------------------------
 " TODO:
 " 	function, to inject "contained", see lhVimSpell approach
+"
+" Issue: {{{2
+" While typing new text, synID at current position isn't set yet when using
+" i_CTRL-R=
+" e.g. (where "^" marks the cursor position, in C++ code, '><' marks correct
+" solution, 'WW' marks incorrect solution)
+" * iab-<expr> case: everything works fine
+"           synId(col)           synID(col-1)     synstack(col)        synstack(col-1)
+"   //^     W''W                 >'cCommentL'<    W'cBlock'W           >'cCommentL' <
+"   /**/^   >''<                 >''         <    >'cBlock'<           >'cBlock'    <
+"   /*^*/   >'cCommentStart'<    >'cComment' <    >'cCommentStart'<    >'cComment'  <
+"
+" inoreab <buffer> <expr> µ printf("'%s'  '%s'  '%s'  '%s'", synIDattr(synID(line('.'),col('.'),1),'name'), synIDattr(synID(line('.'),col('.')-1,1),'name'), synIDattr(synstack(line('.'),col('.'))[-1], 'name'), synIDattr(synstack(line('.'),col('.')-1)[-1], 'name'))
+"
+" * iab <c-r>= case: where problems occur
+"           synId(col)           synID(col-1)         synstack(col)        synstack(col-1)
+"   //^     W''>                 >'cCommentL'<        W'cBlock'W           >'cCommentL'<
+"   /**/^   >''<                 W'cCommentStart'W    >'cBlock'<           W'cCommentStart'W
+"   /**/ ^  >''<                 >''<                 >'cBlock'<           >'cBlock'<
+"   /*^*/   >'cCommentStart'<    >'cCommentStart'<    >'cCommentStart'<    >'cCommentStart'<
+"
+"  inoreab <silent> <buffer> µ <c-r>=printf("'%s'  '%s'  '%s'  '%s'", synIDattr(synID(line('.'),col('.'),1),'name'), synIDattr(synID(line('.'),col('.')-1,1),'name'), synIDattr(synstack(line('.'),col('.'))[-1], 'name'), synIDattr(synstack(line('.'),col('.')-1)[-1], 'name'))<cr>
+"
+" Unfortunatelly, we cannot use iab-<expr> as we need to move the cursor
+" around...
+"
 " }}}1
 "=============================================================================
 
@@ -74,7 +100,7 @@ endfunction
 
 " Functions: skip string, comment, character, doxygen                  {{{3
 func! lh#syntax#skip_at(l,c)
-  return lh#syntax#name_at(a:l,a:c) =~? 'string\|comment\|character\|doxygen'
+  return lh#syntax#name_at(a:l,a:c) =~? '\vstring|comment|character|doxygen'
 endfun
 func! lh#syntax#SkipAt(l,c)
   return lh#syntax#skip_at(a:l,a:c)
@@ -98,8 +124,7 @@ endfun
 command! SynShow echo 'hi<'.lh#syntax#name_at_mark('.',1).'> trans<'
       \ lh#syntax#name_at_mark('.',0).'> lo<'.
       \ synIDattr(synIDtrans(synID(line('.'), col('.'), 1)), 'name').'>   ## '
-      \ lh#list#transform(synstack(line("."), col(".")), [], 'synIDattr(v:1_, "name")')
-
+      \ map(synstack(line("."), col(".")), 'synIDattr(v:val, "name")')
 
 " Function: lh#syntax#list_raw(name) : string                          {{{3
 function! lh#syntax#list_raw(name)
@@ -130,7 +155,7 @@ function! lh#syntax#list(name)
     else
       let li = ''
     endif
-    if strlen(li) != 0
+    if !empty(li)
       let li = substitute(li, 'contained\S*\|transparent\|nextgroup\|skipwhite\|skipnl\|skipempty', '', 'g')
       let kinds = split(li, '\s\+')
       call extend(res, kinds)
@@ -232,10 +257,10 @@ function! lh#syntax#prev_hl(name, ...) abort
   return 1
 endfunction
 
-" Function: lh#syntax#getline_without(linenr, syn_pattern) : string {{{3
+" Function: lh#syntax#getline_not_matching(linenr, syn_pattern) : string {{{3
 " @since Version 4.0.0
 " @warning col(['.', '$']) doesn't work!, so linenr shall be a number
-function! lh#syntax#getline_without(linenr, syn_pattern) abort
+function! lh#syntax#getline_not_matching(linenr, syn_pattern) abort
   call lh#assert#type(a:linenr).is(42)
   let valid =  map(range(col([a:linenr, '$'])-1), '! lh#syntax#match_at(a:syn_pattern, a:linenr, v:val+1) ? v:val : -1')
   call filter(valid, 'v:val >= 0')
@@ -244,6 +269,58 @@ function! lh#syntax#getline_without(linenr, syn_pattern) abort
   let res = join(map(copy(valid), 'line[v:val]'), '')
   return res
 endfunction
+
+" Function: lh#syntax#getline_matching(linenr, syn_pattern) : string {{{3
+" @since Version 4.0.0
+" @warning col(['.', '$']) doesn't work!, so linenr shall be a number
+" @warning This could be quite slow :( ...
+function! lh#syntax#getline_matching(linenr, syn_pattern) abort
+  " call lh#assert#type(a:linenr).is(42)
+  let valid =  map(range(col([a:linenr, '$'])-1), 'lh#syntax#match_at(a:syn_pattern, a:linenr, v:val+1) ? v:val : -1')
+  call filter(valid, 'v:val >= 0')
+  let line = getline(a:linenr)
+  " join is required to merge bytes back into multibyte-characters
+  let res = join(map(copy(valid), 'line[v:val]'), '')
+  return res
+endfunction
+
+" Function: lh#syntax#line_filter(syn_pattern) : object {{{3
+function! s:match(id) dict abort " {{{4
+  if has_key(self.ids, a:id)
+    return self.ids[a:id]
+  endif
+  let name = synIDattr(a:id, "name")
+  let self.ids[a:id] = match(name, self.pattern) >= 0
+  return self.ids[a:id]
+endfunction
+
+function! s:getline_matching(linenr) dict abort " {{{4
+  let valid =  map(range(col([a:linenr, '$'])-1), 'self.match(synID(a:linenr, v:val+1, 1)) ? v:val : -1')
+  call filter(valid, 'v:val >= 0')
+  let line = getline(a:linenr)
+  let res = join(map(copy(valid), 'line[v:val]'), '')
+  return res
+endfunction
+
+function! s:getline_not_matching(linenr) dict abort " {{{4
+  let valid =  map(range(col([a:linenr, '$'])-1), '! self.match(synID(a:linenr, v:val+1, 1)) ? v:val : -1')
+  call filter(valid, 'v:val >= 0')
+  let line = getline(a:linenr)
+  let res = join(map(copy(valid), 'line[v:val]'), '')
+  return res
+endfunction
+
+let s:k_script_name = expand('<sfile>:p')
+function! lh#syntax#line_filter(syn_pattern) abort " {{{4
+  let obj = lh#object#make_top_type({})
+  let obj.pattern = a:syn_pattern
+  let obj.ids = {}
+
+  call lh#object#inject_methods(obj, s:k_script_name, ['match', 'getline_matching', 'getline_not_matching'])
+
+  return obj
+endfunction
+
 " Functions }}}1
 "------------------------------------------------------------------------
 let &cpo=s:cpo_save
