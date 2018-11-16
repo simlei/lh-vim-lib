@@ -126,7 +126,7 @@ function! lh#exception#callstack(throwpoint) abort
             let dScripts[script] = reverse(readfile(script))
           endif
           if !exists('fstart')
-            let fstart = len(dScripts[script]) - match(dScripts[script], '^\s*fu\%[nction]!\=\s\+'.fname.'\s*(')
+            let fstart = len(dScripts[script]) - match(dScripts[script], '^\s*fu\%[nction]!\=\s\+\([sgpb]:\)\?'.fname.'\s\*(')
           endif
           let data = {'script': script, 'fname': fname, 'fstart': fstart, 'offset': offset }
           let data.pos = data.offset + fstart
