@@ -252,7 +252,7 @@ function! lh#exception#say_what(...) abort
   endwhile
 
   call setqflist(reverse(qf))
-  if exists(':Copen')
+  if exists(':Copen') && exists('g:lh_allow_Copen')
     Copen
   else
     copen

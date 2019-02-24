@@ -80,7 +80,7 @@ function! lh#assert#_trace_assert(msg) abort
       let mode = lh#ui#which('confirm', msg, "&Ignore\n&Stop\n&Debug\nStack&trace...", 1)
       if mode ==? 'stacktrace...'
         call setqflist(cb)
-        if exists(':Copen')
+        if exists(':Copen') && exists('g:lh_allow_Copen')
           Copen
         else
           copen
