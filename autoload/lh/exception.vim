@@ -111,7 +111,9 @@ function! lh#exception#callstack(throwpoint) abort
             unlet script
             let script = ''
           endif
-          unlet fstart
+          if exists("fstart")
+              unlet fstart
+          endif
         else
           if fname =~ '^\d\+$' | let fname = '{'.fname.'}' | endif
           let fn_def = lh#askvim#where_is_function_defined(fname)
