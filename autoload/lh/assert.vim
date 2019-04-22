@@ -149,7 +149,7 @@ endfunction
 " Function: lh#assert#equal(expected, actual, ...) {{{3
 function! lh#assert#equal(expected, actual, ...) abort
   if a:expected != a:actual
-    let msg = a:0 > 0 ? a:1 : 'Expected '.a:expected.' but got '.a:actual
+    let msg = a:0 > 0 ? a:1 : 'Expected '.string(a:expected).' but got '.string(a:actual)
     call lh#assert#_trace_assert(msg)
   endif
 endfunction
@@ -157,7 +157,7 @@ endfunction
 " Function: lh#assert#not_equal(expected, actual, ...) {{{3
 function! lh#assert#not_equal(expected, actual, ...) abort
   if a:expected == a:actual
-    let msg = a:0 > 0 ? a:1 : 'Expected not '.a:expected.' but got '.a:actual
+    let msg = a:0 > 0 ? a:1 : 'Expected not '.string(a:expected).' but got '.string(a:actual)
     call lh#assert#_trace_assert(msg)
   endif
 endfunction
